@@ -1,0 +1,9 @@
+# VIBES UNIVERSITY - REQUIREMENTS
+# Python dependencies for the course platform
+
+Flask==2.3.3
+Flask-CORS==4.0.0
+Werkzeug==2.3.7
+markdown==3.5.1
+requests==2.31.0
+

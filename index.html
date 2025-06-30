@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBES UNIVERSITY - The Last Chance to Escape Nigeria's Economic Collapse</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #000000, #1a1a1a, #000000);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 15px 0;
+            border-bottom: 2px solid #ff6b35;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff6b35;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #ff6b35;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="a" cx="50%" cy="50%"><stop offset="0%" stop-color="%23ff6b35" stop-opacity="0.1"/><stop offset="100%" stop-color="%23000" stop-opacity="0.8"/></radialGradient></defs><rect width="100%" height="100%" fill="url(%23a)"/></svg>');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .hero-content {
+            text-align: center;
+            z-index: 2;
+        }
+
+        .warning-badge {
+            background: #ff0000;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            line-height: 1.1;
+            background: linear-gradient(45deg, #ff6b35, #ffffff, #ff6b35);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            color: #ff6b35;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            color: #ffffff;
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.5);
+        }
+
+        .cta-button.secondary {
+            background: transparent;
+            border: 2px solid #ff6b35;
+        }
+
+        /* Crisis Stats */
+        .crisis-stats {
+            background: #1a1a1a;
+            padding: 80px 0;
+            border-top: 3px solid #ff6b35;
+            border-bottom: 3px solid #ff6b35;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: rgba(255, 107, 53, 0.1);
+            padding: 40px 20px;
+            border-radius: 15px;
+            border: 2px solid #ff6b35;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ff6b35;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Problem Section */
+        .problem-section {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #000000, #2a0a0a);
+        }
+
+        .problem-content {
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .problem-section h2 {
+            font-size: 3rem;
+            color: #ff6b35;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .problem-list {
+            list-style: none;
+            margin: 40px 0;
+        }
+
+        .problem-list li {
+            background: rgba(255, 0, 0, 0.1);
+            margin: 20px 0;
+            padding: 20px;
+            border-left: 5px solid #ff0000;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Solution Section */
+        .solution-section {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #1a1a1a, #000000);
+        }
+
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .course-card {
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #ff6b35;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .course-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .course-card:hover::before {
+            left: 100%;
+        }
+
+        .course-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.3);
+        }
+
+        .course-icon {
+            font-size: 3rem;
+            color: #ff6b35;
+            margin-bottom: 20px;
+        }
+
+        .course-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+
+        .course-description {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .income-potential {
+            background: rgba(255, 107, 53, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #000000, #1a0a0a);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .pricing-card {
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            border: 3px solid #ff6b35;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .pricing-card.featured {
+            transform: scale(1.05);
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #3a2a00, #2a1a00);
+        }
+
+        .pricing-card.featured::before {
+            content: 'MOST POPULAR';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffd700;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .pricing-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #ff6b35;
+        }
+
+        .pricing-amount {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .pricing-currency {
+            font-size: 1.2rem;
+            color: #ff6b35;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin: 30px 0;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: #ff6b35;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        /* Countdown Timer */
+        .countdown-section {
+            background: #ff0000;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .countdown-timer {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .countdown-item {
+            background: #000;
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 80px;
+        }
+
+        .countdown-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        .countdown-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #ffffff;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 100px 0;
+            background: #1a1a1a;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .testimonial-card {
+            background: rgba(255, 107, 53, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #ff6b35;
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .testimonial-author {
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        .testimonial-result {
+            color: #00ff00;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* Footer */
+        .footer {
+            background: #000000;
+            padding: 60px 0 30px;
+            border-top: 3px solid #ff6b35;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h3 {
+            color: #ff6b35;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .footer-section p, .footer-section a {
+            color: #cccccc;
+            text-decoration: none;
+            line-height: 1.6;
+        }
+
+        .footer-section a:hover {
+            color: #ff6b35;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .social-links a {
+            background: #ff6b35;
+            color: #000;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .social-links a:hover {
+            background: #ffffff;
+            transform: translateY(-3px);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid #333;
+            color: #888;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero h2 {
+                font-size: 1.8rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .countdown-timer {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .pricing-card.featured {
+                transform: none;
+            }
+        }
+
+        /* Floating Action Buttons */
+        .floating-actions {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .floating-btn {
+            display: block;
+            width: 60px;
+            height: 60px;
+            background: #ff6b35;
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.5);
+        }
+
+        .urgency-text {
+            color: #ff0000;
+            font-weight: bold;
+            text-transform: uppercase;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav container">
+            <div class="logo">VIBES UNIVERSITY</div>
+            <div class="nav-links">
+                <a href="#courses">Courses</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#testimonials">Success Stories</a>
+                <a href="#contact">Contact</a>
+                <a href="/student/login" style="color: #ff6b35; font-weight: bold;">Student Login</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="warning-badge">⚠️ ECONOMIC EMERGENCY ⚠️</div>
+                <h1>THE NAIRA IS COLLAPSING<br>YOUR FUTURE IS AT RISK</h1>
+                <h2>ESCAPE THE SYSTEM OR BE CRUSHED BY IT</h2>
+                <p>While 34.8% inflation destroys your purchasing power and 6.5% youth unemployment keeps you trapped, the smart ones are building AI-powered income streams that work 24/7. <span class="urgency-text">This is your last chance to join them.</span></p>
+                
+                <a href="/pay" class="cta-button">SECURE YOUR SPOT NOW - ₦100,000</a>
+                <a href="#courses" class="cta-button secondary">See How Others Escaped</a>
+                <br><br>
+                <a href="/student/login" style="color: #ff6b35; text-decoration: none; font-size: 1.1rem; border-bottom: 1px solid #ff6b35; padding-bottom: 2px;">🎓 Returning Student? Login to Your Courses</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Crisis Stats -->
+    <section class="crisis-stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">34.8%</div>
+                    <div class="stat-label">Inflation Rate<br>Destroying Your Money</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">6.5%</div>
+                    <div class="stat-label">Youth Unemployment<br>No Jobs Available</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">70%</div>
+                    <div class="stat-label">Naira Devaluation<br>Your Savings Worthless</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">77%</div>
+                    <div class="stat-label">Graduates Jobless<br>Degree = Useless Paper</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem-section">
+        <div class="container">
+            <div class="problem-content">
+                <h2>THE BRUTAL TRUTH ABOUT NIGERIA'S COLLAPSE</h2>
+                <p style="font-size: 1.3rem; margin-bottom: 40px;">While you're reading this, your financial future is being destroyed. Every second you wait, you fall further behind.</p>
+                
+                <ul class="problem-list">
+                    <li>🔥 Your degree is WORTHLESS - 77% of graduates can't find jobs</li>
+                    <li>💸 Inflation at 34.8% is eating your money faster than you can earn it</li>
+                    <li>📉 The Naira lost 70% of its value - your savings are disappearing</li>
+                    <li>🚫 Traditional jobs pay ₦50,000-₦150,000 while rent costs ₦500,000+</li>
+                    <li>⏰ Every day you delay, someone else takes your spot in the new economy</li>
+                    <li>🌍 The world is moving to AI - Nigeria is being left behind</li>
+                </ul>
+
+                <p style="font-size: 1.4rem; color: #ff6b35; font-weight: bold; margin-top: 40px;">
+                    THE SYSTEM HAS FAILED YOU. NOW YOU MUST SAVE YOURSELF.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section class="solution-section" id="courses">
+        <div class="container">
+            <div class="problem-content">
+                <h2>THE ONLY ESCAPE: AI-POWERED INCOME SYSTEMS</h2>
+                <p style="font-size: 1.3rem;">While others struggle for ₦50,000 jobs, our students build systems generating ₦500,000-₦5,000,000 monthly with just 1 hour of work after setup.</p>
+            </div>
+
+            <div class="solution-grid">
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="course-title">AI Marketing Mastery</div>
+                    <div class="course-description">Build automated marketing systems that generate leads and sales 24/7 while you sleep.</div>
+                    <div class="income-potential">Income Potential: ₦200,000 - ₦2,000,000/month</div>
+                </div>
+
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-code"></i></div>
+                    <div class="course-title">AI Coding & Development</div>
+                    <div class="course-description">Create software and apps using AI tools without years of programming study.</div>
+                    <div class="income-potential">Income Potential: ₦300,000 - ₦3,000,000/month</div>
+                </div>
+
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-video"></i></div>
+                    <div class="course-title">AI Content Creation</div>
+                    <div class="course-description">Generate viral content, videos, and digital products that sell automatically.</div>
+                    <div class="income-potential">Income Potential: ₦150,000 - ₦1,500,000/month</div>
+                </div>
+
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-shopping-cart"></i></div>
+                    <div class="course-title">AI E-commerce Automation</div>
+                    <div class="course-description">Build online stores that find products, create listings, and process orders automatically.</div>
+                    <div class="income-potential">Income Potential: ₦250,000 - ₦2,500,000/month</div>
+                </div>
+
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-robot"></i></div>
+                    <div class="course-title">AI Business Automation</div>
+                    <div class="course-description">Automate entire business processes and sell automation services to companies.</div>
+                    <div class="income-potential">Income Potential: ₦400,000 - ₦4,000,000/month</div>
+                </div>
+
+                <div class="course-card">
+                    <div class="course-icon"><i class="fas fa-tools"></i></div>
+                    <div class="course-title">AI Tools Mastery</div>
+                    <div class="course-description">Master 50+ AI tools to create multiple income streams simultaneously.</div>
+                    <div class="income-potential">Income Potential: ₦500,000 - ₦5,000,000/month</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Countdown Section -->
+    <section class="countdown-section">
+        <div class="container">
+            <h2 style="margin-bottom: 20px; font-size: 2rem;">⚠️ LIMITED TIME OFFER EXPIRES IN:</h2>
+            <div class="countdown-timer" id="countdown">
+                <div class="countdown-item">
+                    <div class="countdown-number" id="days">07</div>
+                    <div class="countdown-label">Days</div>
+                </div>
+                <div class="countdown-item">
+                    <div class="countdown-number" id="hours">23</div>
+                    <div class="countdown-label">Hours</div>
+                </div>
+                <div class="countdown-item">
+                    <div class="countdown-number" id="minutes">59</div>
+                    <div class="countdown-label">Minutes</div>
+                </div>
+                <div class="countdown-item">
+                    <div class="countdown-number" id="seconds">45</div>
+                    <div class="countdown-label">Seconds</div>
+                </div>
+            </div>
+            <p style="margin-top: 20px; font-size: 1.2rem; font-weight: bold;">After this timer hits zero, prices DOUBLE and spots become unavailable!</p>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="pricing">
+        <div class="container">
+            <div class="problem-content">
+                <h2>CHOOSE YOUR ESCAPE ROUTE</h2>
+                <p style="font-size: 1.3rem;">Every second you hesitate, someone else secures their financial freedom. The choice is yours: stay trapped or break free.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-title">COURSE ACCESS</div>
+                    <div class="pricing-amount">₦100,000</div>
+                    <div class="pricing-currency">One-time payment</div>
+                    <ul class="pricing-features">
+                        <li>Access to all 6 AI courses</li>
+                        <li>39+ detailed video lessons</li>
+                        <li>Step-by-step implementation guides</li>
+                        <li>AI tools and resources library</li>
+                        <li>Private Telegram community</li>
+                        <li>Lifetime updates</li>
+                        <li>30-day money-back guarantee</li>
+                    </ul>
+                    <a href="/pay?plan=course" class="cta-button">START YOUR ESCAPE</a>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="pricing-title">ONLINE MENTORSHIP</div>
+                    <div class="pricing-amount">₦400,000</div>
+                    <div class="pricing-currency">3-month program</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Course Access</li>
+                        <li>Weekly live group coaching calls</li>
+                        <li>Personal AI automation setup</li>
+                        <li>1-on-1 strategy sessions</li>
+                        <li>Done-for-you templates</li>
+                        <li>Priority support</li>
+                        <li>Income guarantee program</li>
+                        <li>Advanced AI tools access</li>
+                    </ul>
+                    <a href="/pay?plan=online" class="cta-button">GUARANTEE YOUR SUCCESS</a>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-title">VIP PHYSICAL CLASS</div>
+                    <div class="pricing-amount">₦2,000,000</div>
+                    <div class="pricing-currency">Exclusive 5-day intensive</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Online Mentorship</li>
+                        <li>5-day intensive in Lagos</li>
+                        <li>Direct access to founder</li>
+                        <li>Hands-on AI system building</li>
+                        <li>Networking with top earners</li>
+                        <li>Business partnership opportunities</li>
+                        <li>Lifetime mastermind access</li>
+                        <li>₦1M income guarantee</li>
+                    </ul>
+                    <a href="/pay?plan=vip" class="cta-button">JOIN THE ELITE</a>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 60px;">
+                <p style="font-size: 1.4rem; color: #ff6b35; font-weight: bold;">
+                    ⚠️ WARNING: Only 50 spots available this month. When they're gone, you wait until next year.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="problem-content">
+                <h2>REAL STUDENTS, REAL RESULTS</h2>
+                <p style="font-size: 1.3rem;">While others make excuses, these students took action and changed their lives forever.</p>
+            </div>
+
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"I was unemployed for 2 years after NYSC. Within 3 months of implementing the AI marketing system, I'm making ₦800,000 monthly from automated funnels. My parents can't believe it."</div>
+                    <div class="testimonial-author">- Chioma O., Lagos</div>
+                    <div class="testimonial-result">Result: ₦800,000/month in 3 months</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"I used to struggle as a freelance developer making ₦30,000/month. Now I build AI-powered apps and charge ₦500,000 per project. I have a 6-month waiting list."</div>
+                    <div class="testimonial-author">- Emeka N., Abuja</div>
+                    <div class="testimonial-result">Result: ₦2.5M/month from AI development</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"My content creation business went from ₦0 to ₦1.2M monthly using AI tools. I create 50 pieces of content daily with just 2 hours of work. The automation is insane."</div>
+                    <div class="testimonial-author">- Fatima A., Kano</div>
+                    <div class="testimonial-result">Result: ₦1.2M/month passive income</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"I dropped out of university because I was making ₦3M monthly from my AI e-commerce stores. My professors are now asking me for business advice."</div>
+                    <div class="testimonial-author">- David I., Port Harcourt</div>
+                    <div class="testimonial-result">Result: ₦3M/month at age 22</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"Started with the ₦100,000 course, now I run an AI automation agency making ₦5M monthly. I employ 12 people and we're expanding to Ghana next month."</div>
+                    <div class="testimonial-author">- Blessing U., Enugu</div>
+                    <div class="testimonial-result">Result: ₦5M/month agency owner</div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"The physical class changed everything. I networked with other successful students and we started a joint venture. We're projecting ₦50M revenue this year."</div>
+                    <div class="testimonial-author">- Tunde S., Ibadan</div>
+                    <div class="testimonial-result">Result: ₦50M projected revenue</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>VIBES UNIVERSITY</h3>
+                    <p>The last chance to escape Nigeria's economic collapse. Join thousands who chose freedom over poverty.</p>
+                    <div class="social-links">
+                        <a href="https://t.me/vibesuniversity" target="_blank"><i class="fab fa-telegram"></i></a>
+                        <a href="https://discord.gg/vibesuniversity" target="_blank"><i class="fab fa-discord"></i></a>
+                        <a href="#"><i class="fab fa-whatsapp"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+
+                <div class="footer-section">
+                    <h3>QUICK LINKS</h3>
+                    <p><a href="#courses">AI Courses</a></p>
+                    <p><a href="#pricing">Pricing Plans</a></p>
+                    <p><a href="#testimonials">Success Stories</a></p>
+                    <p><a href="#">Income Calculator</a></p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>SUPPORT</h3>
+                    <p><a href="#">FAQ</a></p>
+                    <p><a href="#">Contact Support</a></p>
+                    <p><a href="#">Refund Policy</a></p>
+                    <p><a href="#">Terms of Service</a></p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>EMERGENCY CONTACT</h3>
+                    <p>📧 escape@vibesuniversity.com</p>
+                    <p>📱 +234 (0) 800-VIBES-NOW</p>
+                    <p>⚡ 24/7 Emergency Support</p>
+                    <p style="color: #ff6b35; font-weight: bold;">Time is running out. Act now.</p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 Vibes University. All rights reserved. Your financial freedom starts here.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Action Buttons -->
+    <div class="floating-actions">
+        <a href="https://t.me/vibesuniversity" class="floating-btn" title="Join Telegram"><i class="fab fa-telegram"></i></a>
+        <a href="https://discord.gg/vibesuniversity" class="floating-btn" title="Join Discord"><i class="fab fa-discord"></i></a>
+        <a href="#pricing" class="floating-btn" title="Secure Your Spot"><i class="fas fa-rocket"></i></a>
+    </div>
+
+    <script>
+        // Countdown Timer
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const deadline = now + (7 * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000) + (59 * 60 * 1000) + (45 * 1000);
+            
+            const distance = deadline - now;
+            
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            document.getElementById('days').textContent = days.toString().padStart(2, '0');
+            document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+        }
+
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add urgency popup after 30 seconds
+        setTimeout(() => {
+            if (confirm('⚠️ FINAL WARNING: You\'ve been on this page for 30 seconds.\n\nEvery second you delay, your financial future gets worse.\n\nClick OK to secure your spot NOW, or Cancel to remain trapped in poverty.')) {
+                document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 30000);
+
+        // Exit intent popup
+        let exitIntentShown = false;
+        document.addEventListener('mouseleave', function(e) {
+            if (e.clientY <= 0 && !exitIntentShown) {
+                exitIntentShown = true;
+                if (confirm('🚨 WAIT! Don\'t leave without securing your financial freedom!\n\n💸 Nigeria\'s economy is collapsing while you read this.\n\n✅ Click OK for an exclusive ₦20,000 discount\n❌ Click Cancel to remain trapped in poverty')) {
+                    alert('🎉 EXCLUSIVE DISCOUNT ACTIVATED!\n\nUse code: ESCAPE20K for ₦20,000 off any plan!\n\nThis code expires in 10 minutes. Act NOW!');
+                    document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
