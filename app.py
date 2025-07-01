@@ -60,6 +60,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             description TEXT,
+            course_settings TEXT, -- JSON for additional settings like difficulty, duration
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -96,11 +97,15 @@ def init_db():
         CREATE TABLE IF NOT EXISTS course_progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            course_id TEXT NOT NULL,
-            lesson_id TEXT NOT NULL,
+            course_id INTEGER NOT NULL, -- Changed to INTEGER
+            lesson_id INTEGER NOT NULL, -- Changed to INTEGER
             completed BOOLEAN DEFAULT 0,
             completed_at TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
+            -- Consider adding: FOREIGN KEY (course_id) REFERENCES courses (id),
+            -- FOREIGN KEY (lesson_id) REFERENCES lessons (id)
+            -- if strict referential integrity is desired and all lesson_ids/course_ids will always exist.
+            -- For now, keeping it simple as per original structure minus TEXT type.
         )
     ''')
     
@@ -123,14 +128,16 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS lessons (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course TEXT,
+            course_id INTEGER,      -- Changed from course TEXT
             module TEXT,
-            lesson TEXT,
-            description TEXT,
-            file_path TEXT,
-            content_type TEXT DEFAULT 'file',
+            lesson TEXT,            -- This will be the element title
+            description TEXT,       -- Can be a brief overview, or deprecated if content moves to element_properties
+            file_path TEXT,         -- For file-based elements like self-hosted video or downloads
+            element_properties TEXT,-- JSON for element-specific data (video URL, quiz data, markdown content)
+            content_type TEXT DEFAULT 'file', -- e.g., 'video', 'text', 'quiz', 'download'
             order_index INTEGER DEFAULT 1,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (course_id) REFERENCES courses (id)
         )
     ''')
     
@@ -763,16 +770,41 @@ def dashboard():
     ''', (enrollment['course_type'],)).fetchall()
 
     # Fetch all lessons for the student's course
-    lessons = conn.execute('''
-        SELECT * FROM lessons WHERE course = ? ORDER BY module, order_index, uploaded_at''', (enrollment['course_type'],)).fetchall()
-    total_lessons = len(lessons)
+    # Assumption: enrollment['course_type'] is the NAME of a course in the 'courses' table.
+    target_course_name = enrollment['course_type']
+    course_info = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
 
-    # Fetch completed lessons for this user
-    completed = conn.execute('''
-        SELECT lesson_id FROM course_progress WHERE user_id = ? AND course_id = ? AND completed = 1''', (user_id, enrollment['course_type'])).fetchall()
-    completed_ids = set([row['lesson_id'] for row in completed])
-    completed_count = len(completed_ids)
-    progress_percent = int((completed_count / total_lessons) * 100) if total_lessons else 0
+    detailed_lessons_for_template = []
+    total_lessons = 0
+    completed_ids = set()
+    completed_count = 0
+    progress_percent = 0
+
+    if course_info:
+        target_course_id = course_info['id']
+
+        # Fetch lesson details needed for display and progress calculation
+        lessons_data_raw = conn.execute('''
+            SELECT id, module, lesson, COALESCE(order_index, 1) as order_index
+            FROM lessons
+            WHERE course_id = ?
+            ORDER BY module, order_index, lesson
+        ''', (target_course_id,)).fetchall()
+
+        detailed_lessons_for_template = [dict(l) for l in lessons_data_raw]
+        total_lessons = len(detailed_lessons_for_template)
+
+        if total_lessons > 0:
+            # Assumes course_progress.course_id STORES THE INTEGER ID of the course.
+            # If it stores the course NAME, then use: AND course_id = ? with target_course_name
+            completed_data = conn.execute('''
+                SELECT lesson_id FROM course_progress
+                WHERE user_id = ? AND course_id = ? AND completed = 1
+            ''', (user_id, target_course_id)).fetchall()
+
+            completed_ids = set([str(row['lesson_id']) for row in completed_data]) # Convert to string for template comparison
+            completed_count = len(completed_ids)
+            progress_percent = int((completed_count / total_lessons) * 100) if total_lessons else 0
 
     conn.close()
 
@@ -820,21 +852,21 @@ def dashboard():
                 <div class="progress-bar" style="width: {{progress_percent}}%;">{{progress_percent}}%</div>
             </div>
             <div class="lesson-list">
-                {% for lesson in lessons %}
+                {% for lesson_item in lessons %} {# Changed loop variable name to avoid conflict if 'lesson' is a global #}
                     <div class="lesson-item">
-                        {% if lesson['id'] in completed_ids %}
+                        {% if lesson_item['id']|string in completed_ids %}
                             <span class="lesson-completed">✔️</span>
                         {% else %}
                             <span class="lesson-pending">⏳</span>
                         {% endif %}
-                        {{lesson['module']}} - {{lesson['lesson']}}
+                        {{lesson_item['module']}} - {{lesson_item['lesson']}}
                     </div>
                 {% endfor %}
             </div>
         </div>
     </body>
     </html>
-    ''', enrollment=enrollment, announcements=announcements, lessons=lessons, completed_ids=completed_ids, progress_percent=progress_percent)
+    ''', enrollment=enrollment, announcements=announcements, lessons=detailed_lessons_for_template, completed_ids=completed_ids, progress_percent=progress_percent)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -894,52 +926,29 @@ def admin_dashboard():
         GROUP BY course_type
     ''').fetchall()
     
-    # Get available courses for upload
-    courses = conn.execute('SELECT DISTINCT course_type FROM enrollments').fetchall()
+    # Get available courses for upload (This is part of the old upload logic, no longer needed here)
+    # courses = conn.execute('SELECT DISTINCT course_type FROM enrollments').fetchall()
     
-    if request.method == 'POST':
-        # Handle file upload and metadata
-        course = request.form.get('course')
-        module = request.form.get('module')
-        lesson = request.form.get('lesson')
-        description = request.form.get('description')
-        file = request.files.get('file')
-        
-        if not (course and module and lesson and file and allowed_file(file.filename)):
-            message = 'All fields and a valid file are required.'
-        else:
-            filename = secure_filename(file.filename)
-            course_dir = os.path.join(app.config['UPLOAD_FOLDER'], course, module)
-            os.makedirs(course_dir, exist_ok=True)
-            filepath = os.path.join(course_dir, filename)
-            file.save(filepath)
-            
-            # Store metadata in DB
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO lessons (course, module, lesson, description, file_path)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (course, module, lesson, description, filepath))
-            conn.commit()
-            message = 'Upload successful!'
+    # POST request handling for old lesson upload is removed.
+    # The new way is via /admin/course-studio and its APIs.
+    message = request.args.get('message', '') # Get message from redirect if any
+
+    # Fetching lessons for pagination is removed as the table is removed from this page.
+    # page = request.args.get('page', 1, type=int)
+    # per_page = 20
+    # offset = (page - 1) * per_page
+    # lessons_on_dashboard = conn.execute(...).fetchall() # No longer needed
+    # total_lessons_count_for_dashboard_table = conn.execute(...).fetchone()['count'] # No longer needed
+    # total_pages_for_dashboard_table = ... # No longer needed
     
-    # List existing lessons with pagination
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
-    offset = (page - 1) * per_page
-    
-    lessons = conn.execute('''
-        SELECT *, COALESCE(order_index, 1) as order_index 
-        FROM lessons 
-        ORDER BY uploaded_at DESC 
-        LIMIT ? OFFSET ?
-    ''', (per_page, offset)).fetchall()
-    
-    total_lessons_count = conn.execute('SELECT COUNT(*) as count FROM lessons').fetchone()['count']
-    total_pages = (total_lessons_count + per_page - 1) // per_page
+    # The total_lessons stat can remain if it's a general count.
+    # If it was specifically for the removed table's pagination, it might need adjustment or removal.
+    # For now, assume total_lessons (the stat card) is a general count from the DB.
     
     conn.close()
     
+    # Note: The 'courses' variable passed to template (for course dropdown) is removed.
+    # 'lessons', 'page', 'total_pages' passed to template for pagination are removed.
     return render_template_string('''
     <html>
     <head>
@@ -955,30 +964,13 @@ def admin_dashboard():
             .stat-label { color: #ccc; margin-top: 5px; }
             .section { background: #222; padding: 20px; border-radius: 10px; margin-bottom: 30px; }
             .section h3 { color: #ff6b35; margin-top: 0; }
-            .upload-form { background: #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-            .form-group { margin-bottom: 15px; }
-            .form-group label { display: block; margin-bottom: 5px; color: #ccc; }
-            .form-group input, .form-group select, .form-group textarea { 
-                width: 100%; padding: 10px; border-radius: 8px; border: none; background: #444; color: #fff; 
-            }
-            .upload-btn { background: #4CAF50; color: #fff; padding: 12px 30px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+            /* .upload-form related styles can be removed if not used elsewhere */
             .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
             .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
             .table th { background: #333; color: #ff6b35; }
             .table tr:hover { background: #333; }
-            .action-btn { 
-                padding: 5px 10px; border: none; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;
-            }
-            .edit-btn { background: #4CAF50; color: #fff; }
-            .delete-btn { background: #f44336; color: #fff; }
-            .view-btn { background: #2196F3; color: #fff; }
-            .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
-            .pagination a { 
-                background: #333; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;
-            }
-            .pagination a:hover { background: #ff6b35; }
-            .pagination .current { background: #ff6b35; }
+            /* .action-btn related styles can be removed */
+            /* .pagination related styles can be removed */
             .success-msg { background: #4CAF50; color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
             .course-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
             .course-stat { background: #333; padding: 15px; border-radius: 8px; text-align: center; }
@@ -992,11 +984,12 @@ def admin_dashboard():
                 <a href="{{url_for('admin_analytics')}}" style="background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">📊 Analytics</a>
                 <a href="{{url_for('admin_settings')}}" style="background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">⚙️ Settings</a>
                 <a href="{{url_for('admin_announcements')}}" style="background: #ff6b35; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">📢 Announcements</a>
-                <a href="{{url_for('admin_course_builder')}}" style="background: #4CAF50; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">📝 Course Builder</a>
-                <a href="{{url_for('admin_preview_course', course_type='course')}}" style="background: #2196F3; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">👁️ Preview Course</a>
+                <!-- Link to the new course studio -->
+                <a href="{{url_for('admin_course_studio_page')}}" style="background: #4CAF50; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">🚀 Course Studio</a>
+                <a href="{{url_for('admin_preview_course', course_type='course')}}" style="background: #2196F3; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">👁️ Preview Course (Legacy)</a>
                 <a href="/demo-payment" style="background: #4CAF50; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">🎯 Test Dashboard</a>
                 <a href="{{url_for('admin_logout')}}" class="logout-btn">Logout</a>
-                <a href="{{url_for('admin_courses')}}" style="background: #333; color: #fff; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px;">📚 Manage Courses</a>
+                <!-- Removed old /admin/courses link, as course creation is now part of studio -->
             </div>
         </div>
         
@@ -1020,7 +1013,7 @@ def admin_dashboard():
                 <div class="stat-label">Total Revenue</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{total_lessons}}</div>
+                <div class="stat-number">{{total_lessons_stat}}</div> {# Changed from total_lessons to total_lessons_stat #}
                 <div class="stat-label">Total Lessons</div>
             </div>
         </div>
@@ -1038,44 +1031,7 @@ def admin_dashboard():
             </div>
         </div>
         
-        <div class="section">
-            <h3>📤 Upload Course Content</h3>
-            <form method="post" enctype="multipart/form-data" class="upload-form">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Course Name:</label>
-                        <select name="course" required>
-                            <option value="">Select Course</option>
-                            {% for c in courses %}
-                                <option value="{{c['name']}}">{{c['name']}}</option>
-                            {% endfor %}
-                        </select>
-                        <a href="{{url_for('admin_courses')}}" style="color:#4CAF50; margin-left:10px; font-size:14px; text-decoration:none;">➕ Add New Course</a>
-                    </div>
-                    <div class="form-group">
-                        <label>Module Name:</label>
-                        <select name="module" required>
-                            {% for i in range(1, 16) %}
-                                <option value="Module {{i}}">Module {{i}}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Lesson Title:</label>
-                    <input type="text" name="lesson" placeholder="e.g., Getting Started with AI" required>
-                </div>
-                <div class="form-group">
-                    <label>Description:</label>
-                    <textarea name="description" placeholder="Brief description of the lesson content" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Upload File (videos, docs, images, audio, archives):</label>
-                    <input type="file" name="file" required>
-                </div>
-                <button type="submit" class="upload-btn">📁 Upload Lesson</button>
-            </form>
-        </div>
+        <!-- Course Content Upload and Management sections removed, functionality moved to Course Design Studio -->
         
         <div class="section">
             <h3>📋 Recent Enrollments</h3>
@@ -1105,144 +1061,71 @@ def admin_dashboard():
             </table>
         </div>
         
-        <div class="section">
-            <h3>📚 Course Content Management</h3>
-            <table class="table">
-                <tr>
-                    <th>Course</th>
-                    <th>Module</th>
-                    <th>Lesson</th>
-                    <th>File</th>
-                    <th>Uploaded</th>
-                    <th>Actions</th>
-                </tr>
-                {% for lesson in lessons %}
-                <tr>
-                    <td>{{lesson['course']|title}}</td>
-                    <td>{{lesson['module']}}</td>
-                    <td>{{lesson['lesson']}}</td>
-                    <td>
-                        <a href="{{(lesson['file_path'] or '').replace('static','/static')}}" style="color: #ff6b35; text-decoration: none;">
-                            {{get_file_icon((lesson['file_path'] or '').split('/')[-1])}} {{(lesson['file_path'] or '').split('/')[-1]}}
-                        </a>
-                    </td>
-                    <td>{{lesson['uploaded_at']}}</td>
-                    <td>
-                        <a href="{{url_for('admin_edit_lesson', lesson_id=lesson['id'])}}" class="action-btn edit-btn">✏️ Edit</a>
-                        <a href="{{url_for('admin_preview_lesson', lesson_id=lesson['id'])}}" class="action-btn view-btn">👁️ Preview</a>
-                        <a href="{{url_for('admin_delete_lesson', lesson_id=lesson['id'])}}" 
-                           onclick="return confirm('Are you sure you want to delete this lesson?')" 
-                           class="action-btn delete-btn">🗑️ Delete</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-            
-            {% if total_pages > 1 %}
-            <div class="pagination">
-                {% for p in range(1, total_pages + 1) %}
-                    <a href="?page={{p}}" class="{{'current' if p == page else ''}}">{{p}}</a>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
+        <!-- Removed Course Content Management Table -->
+
     </body>
     </html>
-    ''', message=message, lessons=lessons, get_file_icon=get_file_icon, 
+    ''', message=message,
          total_users=total_users, total_enrollments=total_enrollments, 
          completed_payments=completed_payments, total_revenue=total_revenue,
-         total_lessons=total_lessons, recent_enrollments=recent_enrollments,
-         course_stats=course_stats, page=page, total_pages=total_pages)
+         total_lessons_stat=total_lessons,
+         recent_enrollments=recent_enrollments,
+         course_stats=course_stats,
+         get_file_icon=get_file_icon) # get_file_icon might not be needed if table removed
 
-@app.route('/admin/edit/<int:lesson_id>', methods=['GET', 'POST'])
-def admin_edit_lesson(lesson_id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin_login'))
+# Route for old admin_edit_lesson - to be deprecated/removed
+# @app.route('/admin/edit/<int:lesson_id>', methods=['GET', 'POST'])
+# def admin_edit_lesson(lesson_id):
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
     
-    conn = get_db_connection()
-    lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+#     conn = get_db_connection()
+#     lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone() # This still uses old 'course'
     
-    if not lesson:
-        conn.close()
-        return "Lesson not found", 404
+#     if not lesson:
+#         conn.close()
+#         return "Lesson not found", 404
     
-    message = ''
-    if request.method == 'POST':
-        course = request.form.get('course')
-        module = request.form.get('module')
-        lesson_title = request.form.get('lesson')
-        description = request.form.get('description')
-        file = request.files.get('file')
-        
-        if not (course and module and lesson_title):
-            message = 'Course, module, and lesson title are required.'
-        else:
-            # Update metadata
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE lessons 
-                SET course = ?, module = ?, lesson = ?, description = ?
-                WHERE id = ?
-            ''', (course, module, lesson_title, description, lesson_id))
-            
-            # Handle file upload if new file is provided
-            if file and file.filename and allowed_file(file.filename):
-                # Delete old file
-                if os.path.exists(lesson['file_path']):
-                    os.remove(lesson['file_path'])
-                
-                # Save new file
-                filename = secure_filename(file.filename)
-                course_dir = os.path.join(app.config['UPLOAD_FOLDER'], course, module)
-                os.makedirs(course_dir, exist_ok=True)
-                filepath = os.path.join(course_dir, filename)
-                file.save(filepath)
-                
-                # Update file path in database
-                cursor.execute('UPDATE lessons SET file_path = ? WHERE id = ?', (filepath, lesson_id))
-            
-            conn.commit()
-            message = 'Lesson updated successfully!'
-            lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
-    
-    conn.close()
-    
-    return render_template_string('''
-    <html><head><title>Edit Lesson</title></head><body style="background:#111;color:#fff;font-family:Arial,sans-serif;padding:40px;">
-    <h2>Edit Lesson</h2>
-    <a href="{{url_for('admin_dashboard')}}" style="color:#ff6b35;">← Back to Dashboard</a>
-    <form method="post" enctype="multipart/form-data" style="background:#222;padding:30px;border-radius:12px;max-width:500px;margin:30px auto;">
-        <label>Course Name: <input type="text" name="course" value="{{lesson['course']}}" required style="width:100%;padding:8px;"></label><br><br>
-        <label>Module Name: <input type="text" name="module" value="{{lesson['module']}}" required style="width:100%;padding:8px;"></label><br><br>
-        <label>Lesson Title: <input type="text" name="lesson" value="{{lesson['lesson']}}" required style="width:100%;padding:8px;"></label><br><br>
-        <label>Description:<br><textarea name="description" style="width:100%;height:60px;padding:8px;">{{lesson['description'] or ''}}</textarea></label><br><br>
-        <label>Current File: <span style="color:#ff6b35;">{{(lesson['file_path'] or '').split('/')[-1]}}</span></label><br><br>
-        <label>Upload New File (optional): <input type="file" name="file"></label><br><br>
-        <button type="submit" style="background:#4CAF50;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;">Update Lesson</button>
-    </form>
-    {% if message %}<div style="color:#0f0;margin:20px 0;">{{message}}</div>{% endif %}
-    </body></html>
-    ''', lesson=lesson, message=message)
+#     message = ''
+#     # ... rest of the old logic commented out or removed ...
+#     conn.close()
+#     return "This route is deprecated. Use Course Design Studio."
 
-@app.route('/admin/delete/<int:lesson_id>')
-def admin_delete_lesson(lesson_id):
-    if not session.get('admin_logged_in'):
-        return redirect(url_for('admin_login'))
-    
-    conn = get_db_connection()
-    lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
-    
-    if lesson:
-        # Delete file from filesystem
-        if os.path.exists(lesson['file_path']):
-            os.remove(lesson['file_path'])
-        
-        # Delete from database
-        conn.execute('DELETE FROM lessons WHERE id = ?', (lesson_id,))
-        conn.commit()
-    
-    conn.close()
-    return redirect(url_for('admin_dashboard'))
+# @app.route('/admin/delete/<int:lesson_id>')
+# def admin_delete_lesson(lesson_id): # Old delete lesson
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
+#     # ... old logic ...
+#     return "This route is deprecated. Use Course Design Studio APIs."
+
+# @app.route('/admin/course-builder', methods=['GET', 'POST'])
+# def admin_course_builder():
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
+#     # ... old logic ...
+#     return "This route is deprecated. Use Course Design Studio."
+
+# @app.route('/admin/edit-lesson-content/<int:lesson_id>', methods=['GET', 'POST'])
+# def admin_edit_lesson_content(lesson_id):
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
+#     # ... old logic ...
+#     return "This route is deprecated. Use Course Design Studio."
+
+# @app.route('/admin/courses', methods=['GET', 'POST'])
+# def admin_courses():
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
+#     # ... old logic ...
+#     return "This route is deprecated. Use Course Design Studio."
+
+# @app.route('/admin/courses/<int:course_id>', methods=['GET', 'POST'])
+# def admin_course_detail(course_id):
+#     if not session.get('admin_logged_in'):
+#         return redirect(url_for('admin_login'))
+#     # ... old logic ...
+#     return "This route is deprecated. Use Course Design Studio."
+
 
 @app.route('/courses')
 def student_courses():
@@ -1254,13 +1137,41 @@ def student_courses():
     conn = get_db_connection()
     
     # Get all lessons for the student's course type
-    lessons = conn.execute('''
-        SELECT *, COALESCE(order_index, 1) as order_index 
-        FROM lessons 
-        WHERE course = ? 
-        ORDER BY module, order_index, lesson
-    ''', (enrollment['course_type'],)).fetchall()
+    # Assumption: enrollment['course_type'] is the NAME of a course in the 'courses' table.
+    target_course_name = enrollment['course_type']
+    course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
+
+    lessons = []
+    modules = {}
     
+    if course_details:
+        target_course_id = course_details['id']
+        lessons_data = conn.execute('''
+            SELECT id, course_id, module, lesson, description, file_path, content_type, element_properties,
+                   COALESCE(order_index, 1) as order_index
+            FROM lessons
+            WHERE course_id = ?
+            ORDER BY module, order_index, lesson
+        ''', (target_course_id,)).fetchall()
+
+        for lesson_row in lessons_data:
+            lesson_dict = dict(lesson_row)
+            try:
+                lesson_dict['element_properties'] = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
+            except (json.JSONDecodeError, TypeError):
+                lesson_dict['element_properties'] = {}
+            lessons.append(lesson_dict)
+
+        # Organize lessons by module (using the fetched and processed lessons list)
+        for l_item in lessons: # Use the processed 'lessons' list
+            module_name = l_item['module']
+            if module_name not in modules:
+                modules[module_name] = []
+            modules[module_name].append(l_item)
+    else: # Course name from enrollment type not found in courses table
+        # Handle this case, maybe log an error or show a message
+        pass # modules will be empty, lessons will be empty
+
     # Get student's progress
     progress = conn.execute('''
         SELECT * FROM course_progress 
@@ -1399,25 +1310,37 @@ def view_lesson(lesson_id):
         return redirect(url_for('pay'))
     
     conn = get_db_connection()
-    lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+    lesson_row = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
     
-    if not lesson:
+    if not lesson_row:
         conn.close()
         return "Lesson not found", 404
     
-    # Check if lesson belongs to student's course
-    if lesson['course'] != enrollment['course_type']:
+    lesson = dict(lesson_row)
+    try:
+        lesson['element_properties'] = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
+    except (json.JSONDecodeError, TypeError):
+        lesson['element_properties'] = {}
+
+    # Check if lesson belongs to student's enrolled course
+    # Assumption: enrollment['course_type'] is the NAME of a course in the 'courses' table.
+    enrolled_course_name = enrollment['course_type']
+    enrolled_course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (enrolled_course_name,)).fetchone()
+
+    if not enrolled_course_details or lesson['course_id'] != enrolled_course_details['id']:
         conn.close()
-        return "Access denied", 403
+        return "Access denied to this lesson.", 403
     
-    # Get next and previous lessons
-    all_lessons = conn.execute('''
-        SELECT *, COALESCE(order_index, 1) as order_index 
+    # Get next and previous lessons within the same course_id
+    all_lessons_raw = conn.execute('''
+        SELECT id, lesson, COALESCE(order_index, 1) as order_index
         FROM lessons 
-        WHERE course = ? 
+        WHERE course_id = ?
         ORDER BY module, order_index, lesson
-    ''', (enrollment['course_type'],)).fetchall()
+    ''', (lesson['course_id'],)).fetchall()
     
+    all_lessons = [dict(l) for l in all_lessons_raw] # Convert rows to dicts
+
     current_index = None
     for i, l in enumerate(all_lessons):
         if l['id'] == lesson_id:
@@ -1430,43 +1353,109 @@ def view_lesson(lesson_id):
     conn.close()
     
     # Determine content type and render appropriately
-    content_type = lesson['content_type'] if lesson['content_type'] else 'file'
+    content_type = lesson.get('content_type', 'file') # Use .get for safety
+    element_props = lesson.get('element_properties', {})
+    lesson_content = '<p>No content available for this lesson.</p>' # Default
+
+    if content_type == 'text' or content_type == 'markdown': # Assuming 'text' implies markdown
+        md_content = element_props.get('markdown_content', lesson.get('description', '')) # Fallback to description
+        lesson_content = render_markdown_content(md_content if md_content else 'No text content provided.')
     
-    if content_type == 'markdown':
-        # Render markdown content
-        lesson_content = render_markdown_content(lesson['description'] if lesson['description'] else '')
-    else:
-        # Handle file-based content
-        if lesson['file_path']:
-            file_ext = (lesson['file_path'] or '').split('.')[-1].lower()
-            file_url = (lesson['file_path'] or '').replace('static', '/static')
-            
-            if file_ext in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv']:
+    elif content_type == 'video':
+        video_url_prop = element_props.get('url')
+        file_path = lesson.get('file_path')
+
+        if video_url_prop and video_url_prop.strip(): # Prioritize URL from properties (e.g. YouTube)
+            # Basic YouTube embed, can be made more robust
+            if "youtube.com/watch?v=" in video_url_prop:
+                video_id = video_url_prop.split("v=")[1].split("&")[0]
                 lesson_content = f'''
+                <div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+                    <iframe src="https://www.youtube.com/embed/{video_id}"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                            allowfullscreen></iframe>
+                </div>'''
+            elif "youtu.be/" in video_url_prop:
+                video_id = video_url_prop.split("youtu.be/")[1].split("?")[0]
+                lesson_content = f'''
+                <div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+                    <iframe src="https://www.youtube.com/embed/{video_id}"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                            allowfullscreen></iframe>
+                </div>'''
+            else: # Generic URL embed (might not work for all video services)
+                 lesson_content = f'''
                 <div class="video-container">
-                    <video controls>
-                        <source src="{file_url}" type="video/{file_ext}">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-                '''
-            elif file_ext in ['jpg', 'jpeg', 'png', 'gif', 'svg']:
-                lesson_content = f'''
-                <div style="text-align: center;">
-                    <img src="{file_url}" style="max-width: 100%; border-radius: 8px;" alt="{lesson['lesson']}">
-                </div>
-                '''
-            else:
-                lesson_content = f'''
-                <div class="file-download">
-                    <h3>{get_file_icon(lesson['file_path'].split('/')[-1])} {lesson['file_path'].split('/')[-1]}</h3>
-                    <p>This file cannot be displayed directly. Please download it to view.</p>
-                    <a href="{file_url}" class="download-btn" download>Download File</a>
-                </div>
-                '''
+                     <video controls width="100%"><source src="{video_url_prop}">Your browser does not support the video tag.</video>
+                </div>'''
+        elif file_path: # Self-hosted video via file_path
+            file_url = file_path.replace('static', '/static') # Ensure correct web path
+            file_ext = file_path.split('.')[-1].lower()
+            lesson_content = f'''
+            <div class="video-container">
+                <video controls width="100%">
+                    <source src="{file_url}" type="video/{file_ext}">
+                    Your browser does not support the video tag.
+                </video>
+            </div>'''
         else:
-            lesson_content = '<p>No content available for this lesson.</p>'
-    
+            lesson_content = '<p>Video content is not available for this lesson.</p>'
+
+    elif content_type == 'quiz':
+        quiz_question = element_props.get('question', 'No question defined.')
+        quiz_options = element_props.get('options', [])
+        # Basic quiz rendering - interactive submission would need more JS
+        options_html = "".join([f"<div class='quiz-option' data-index='{i}'>{opt}</div>" for i, opt in enumerate(quiz_options)])
+        lesson_content = f'''
+            <div class="quiz-container">
+                <h3 class="quiz-question">{quiz_question}</h3>
+                <div class="quiz-options-list">{options_html}</div>
+                <button onclick="submitStudentQuiz()" class="download-btn" style="margin-top:15px;">Submit Answer</button>
+            </div>
+            <script>
+                function submitStudentQuiz() {{
+                    // Basic quiz submission alert. Real submission would go to backend.
+                    alert("Quiz answer submitted (demo)!");
+                    // Mark lesson complete or similar logic here
+                    markCompleted();
+                }}
+            </script>
+            ''' # Added markCompleted() from original template
+
+    elif content_type == 'download':
+        file_path = lesson.get('file_path')
+        if file_path:
+            file_url = file_path.replace('static', '/static')
+            filename = file_path.split('/')[-1]
+            lesson_content = f'''
+            <div class="file-download">
+                <h3>{get_file_icon(filename)} {filename}</h3>
+                <p>Download the resource to continue.</p>
+                <a href="{file_url}" class="download-btn" download onclick="markCompleted()">Download File</a>
+            </div>''' # Added markCompleted() from original template
+        else:
+            lesson_content = "<p>Downloadable file not available for this lesson.</p>"
+
+    # Fallback for other file types if file_path exists but content_type is generic 'file' or unhandled
+    elif lesson.get('file_path') and (content_type == 'file' or not lesson_content):
+        file_path = lesson['file_path']
+        file_ext = (file_path or '').split('.')[-1].lower()
+        file_url = (file_path or '').replace('static', '/static')
+
+        if file_ext in ['jpg', 'jpeg', 'png', 'gif', 'svg']:
+            lesson_content = f'''
+            <div style="text-align: center;">
+                <img src="{file_url}" style="max-width: 100%; border-radius: 8px;" alt="{lesson['lesson']}">
+            </div>'''
+        # Add other specific file extension handlers if needed (e.g. PDF embed)
+        else: # Generic file download if not image or other special type
+            lesson_content = f'''
+            <div class="file-download">
+                <h3>{get_file_icon(file_path.split('/')[-1])} {file_path.split('/')[-1]}</h3>
+                <p>This file cannot be displayed directly. Please download it to view.</p>
+                <a href="{file_url}" class="download-btn" download onclick="markCompleted()">Download File</a>
+            </div>''' # Added markCompleted()
+
     return render_template_string('''
     <html>
     <head>
@@ -1540,8 +1529,8 @@ def view_lesson(lesson_id):
                     },
                     body: JSON.stringify({
                         user_id: {{enrollment['user_id']}},
-                        course_id: '{{lesson['course']}}',
-                        lesson_id: '{{lesson['id']}}'
+                        course_id: {{lesson['course_id']}}, // Changed to lesson['course_id'] (integer)
+                        lesson_id: {{lesson['id']}}  // Should be integer, ensure it's passed as such
                     })
                 }).then(response => response.json())
                   .then(data => {
@@ -3257,6 +3246,1125 @@ def admin_course_detail(course_id):
 # <a href='{{url_for("admin_course_detail", course_id=c["id"])}}'>Manage</a>
 
 # 3. Remove all course dropdowns from other admin forms. All lesson/module management is now done from the course's management page.
+
+# --- API endpoints for new Interactive Course Designer ---
+@app.route('/api/admin/courses', methods=['POST'])
+def api_admin_create_course():
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    data = request.get_json()
+    if not data or not data.get('name') or not data.get('description'): # Changed from title to name
+        return jsonify({'error': 'Missing name or description'}), 400
+
+    name = data['name'] # Changed from title to name
+    description = data['description']
+    # Ensure settings is a string if provided, otherwise default to empty JSON object string
+    course_settings_data = data.get('settings', {})
+    if not isinstance(course_settings_data, dict):
+        try:
+            # Attempt to parse if it's a string, otherwise default
+            course_settings_data = json.loads(course_settings_data) if isinstance(course_settings_data, str) else {}
+        except json.JSONDecodeError:
+            course_settings_data = {} # Default to empty dict if parsing fails
+
+    course_settings = json.dumps(course_settings_data)
+
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO courses (name, description, course_settings) VALUES (?, ?, ?)',
+            (name, description, course_settings)
+        )
+        course_id = cursor.lastrowid
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Course name already exists'}), 409
+    except Exception as e:
+        # It's good practice to log the exception e here
+        return jsonify({'error': f'Database operation failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+    return jsonify({'message': 'Course created successfully', 'course_id': course_id}), 201
+
+@app.route('/api/admin/courses', methods=['GET'])
+def api_admin_get_courses():
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    try:
+        conn = get_db_connection()
+        courses_data = conn.execute('SELECT id, name, description, course_settings FROM courses ORDER BY created_at DESC').fetchall()
+    except Exception as e:
+        # Log e
+        return jsonify({'error': 'Failed to fetch courses from database'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+    courses_list = []
+    for row in courses_data:
+        course = dict(row)
+        try:
+            # Ensure course_settings is parsed from JSON string to dict
+            course['course_settings'] = json.loads(row['course_settings']) if row['course_settings'] else {}
+        except json.JSONDecodeError:
+            course['course_settings'] = {'error': 'Failed to parse settings'} # Or some default
+        courses_list.append(course)
+
+    return jsonify(courses_list)
+
+@app.route('/api/admin/courses/<int:course_id>', methods=['GET'])
+def api_admin_get_course(course_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    try:
+        conn = get_db_connection()
+        course_data = conn.execute('SELECT id, name, description, course_settings FROM courses WHERE id = ?', (course_id,)).fetchone()
+
+        if not course_data:
+            conn.close()
+            return jsonify({'error': 'Course not found'}), 404
+
+        lessons_data = conn.execute(
+            'SELECT id, module, lesson, content_type, element_properties, order_index, file_path FROM lessons WHERE course_id = ? ORDER BY module, order_index',
+            (course_id,)
+        ).fetchall()
+        conn.close()
+
+        course = dict(course_data)
+        try:
+            course['course_settings'] = json.loads(course_data['course_settings']) if course_data['course_settings'] else {}
+        except json.JSONDecodeError:
+            course['course_settings'] = {'error': 'Failed to parse settings'}
+
+        lessons_list = []
+        for lesson_row in lessons_data:
+            lesson = dict(lesson_row)
+            try:
+                lesson['element_properties'] = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
+            except json.JSONDecodeError:
+                lesson['element_properties'] = {'error': 'Failed to parse lesson properties'}
+            lessons_list.append(lesson)
+        course['lessons'] = lessons_list
+
+        return jsonify(course)
+
+    except Exception as e:
+        # Log e
+        if conn: # ensure connection is closed if error happened after open
+            conn.close()
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+
+@app.route('/api/admin/courses/<int:course_id>', methods=['PUT'])
+def api_admin_update_course(course_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    name = data.get('name')
+    description = data.get('description')
+    course_settings_data = data.get('settings')
+
+    if not name and not description and course_settings_data is None:
+        return jsonify({'error': 'No fields to update'}), 400
+
+    fields_to_update = []
+    params = []
+
+    if name:
+        fields_to_update.append("name = ?")
+        params.append(name)
+    if description:
+        fields_to_update.append("description = ?")
+        params.append(description)
+    if course_settings_data is not None:
+        fields_to_update.append("course_settings = ?")
+        params.append(json.dumps(course_settings_data))
+
+    params.append(course_id)
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            f"UPDATE courses SET {', '.join(fields_to_update)} WHERE id = ?",
+            tuple(params)
+        )
+        updated_rows = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        if updated_rows == 0:
+            return jsonify({'error': 'Course not found or no new data to update'}), 404
+
+        return jsonify({'message': 'Course updated successfully'})
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({'error': 'Course name already exists (if you tried to update the name to an existing one)'}), 409
+    except Exception as e:
+        # Log e
+        conn.close()
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+
+@app.route('/api/admin/courses/<int:course_id>', methods=['DELETE'])
+def api_admin_delete_course(course_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Step 1: Delete associated lessons first due to foreign key constraint
+        cursor.execute("DELETE FROM lessons WHERE course_id = ?", (course_id,))
+
+        # Step 2: Delete the course
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        deleted_rows = cursor.rowcount
+
+        conn.commit()
+        conn.close()
+
+        if deleted_rows == 0:
+            return jsonify({'error': 'Course not found'}), 404
+
+        return jsonify({'message': 'Course and its lessons deleted successfully'})
+    except Exception as e:
+        # Log e
+        conn.close()
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
+
+@app.route('/api/admin/courses/<int:course_id>/lessons', methods=['POST'])
+def api_admin_add_lesson_to_course(course_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    # Check if course exists
+    conn = get_db_connection()
+    course = conn.execute('SELECT id FROM courses WHERE id = ?', (course_id,)).fetchone()
+    if not course:
+        conn.close()
+        return jsonify({'error': 'Course not found'}), 404
+
+    data = request.form  # Assuming form data for file uploads
+    lesson_title = data.get('lesson_title')
+    module_name = data.get('module_name')
+    content_type = data.get('content_type')
+    element_properties_str = data.get('element_properties', '{}') # Expect JSON string
+    order_index = data.get('order_index', 1)
+
+    if not all([lesson_title, module_name, content_type]):
+        conn.close()
+        return jsonify({'error': 'Missing required fields: lesson_title, module_name, content_type'}), 400
+
+    try:
+        element_properties = json.loads(element_properties_str)
+    except json.JSONDecodeError:
+        conn.close()
+        return jsonify({'error': 'Invalid JSON format for element_properties'}), 400
+
+    file_path = None
+    if 'file' in request.files:
+        file = request.files['file']
+        if file and file.filename and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            # Ensure the course name used in path is valid for directory creation
+            course_name_for_path = conn.execute('SELECT name FROM courses WHERE id = ?', (course_id,)).fetchone()['name']
+            course_name_for_path = secure_filename(course_name_for_path) # Sanitize it
+
+            lesson_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], course_name_for_path, secure_filename(module_name))
+            os.makedirs(lesson_upload_dir, exist_ok=True)
+            file_path = os.path.join(lesson_upload_dir, filename)
+            file.save(file_path)
+        elif file.filename: # File provided but not allowed
+            conn.close()
+            return jsonify({'error': f'File type not allowed for {file.filename}'}), 400
+
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            '''INSERT INTO lessons (course_id, module, lesson, content_type, element_properties, order_index, file_path)
+               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+            (course_id, module_name, lesson_title, content_type, json.dumps(element_properties), order_index, file_path)
+        )
+        lesson_id = cursor.lastrowid
+        conn.commit()
+        return jsonify({'message': 'Lesson element added successfully', 'lesson_id': lesson_id}), 201
+    except Exception as e:
+        # Log e
+        return jsonify({'error': f'Database operation failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/admin/lessons/<int:lesson_id>', methods=['PUT'])
+def api_admin_update_lesson(lesson_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    conn = get_db_connection()
+    # Check if lesson exists
+    existing_lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+    if not existing_lesson:
+        conn.close()
+        return jsonify({'error': 'Lesson not found'}), 404
+
+    fields_to_update = []
+    params = []
+
+    if request.content_type == 'application/json':
+        data = request.get_json()
+        if not data:
+            conn.close()
+            return jsonify({'error': 'Invalid JSON data'}), 400
+
+        if 'lesson_title' in data:
+            fields_to_update.append("lesson = ?")
+            params.append(data['lesson_title'])
+        if 'module_name' in data:
+            fields_to_update.append("module = ?")
+            params.append(data['module_name'])
+        # content_type is generally not updated this way, but if needed:
+        # if 'content_type' in data:
+        #     fields_to_update.append("content_type = ?")
+        #     params.append(data['content_type'])
+        if 'element_properties' in data:
+            fields_to_update.append("element_properties = ?")
+            params.append(json.dumps(data['element_properties'])) # Ensure it's stored as string
+        if 'order_index' in data:
+            fields_to_update.append("order_index = ?")
+            params.append(data['order_index'])
+        # File handling is not typically done with application/json, so 'file' part is skipped here.
+
+    elif request.content_type.startswith('multipart/form-data'):
+        data = request.form
+        if 'lesson_title' in data:
+            fields_to_update.append("lesson = ?")
+            params.append(data['lesson_title'])
+        if 'module_name' in data:
+            fields_to_update.append("module = ?")
+            params.append(data['module_name'])
+        # content_type is generally not updated this way
+        # if 'content_type' in data:
+        #     fields_to_update.append("content_type = ?")
+        #     params.append(data['content_type'])
+        if 'element_properties' in data:
+            try:
+                json.loads(data['element_properties']) # Validate
+                fields_to_update.append("element_properties = ?")
+                params.append(data['element_properties'])
+            except json.JSONDecodeError:
+                conn.close()
+                return jsonify({'error': 'Invalid JSON for element_properties'}), 400
+        if 'order_index' in data:
+            fields_to_update.append("order_index = ?")
+            params.append(data['order_index'])
+
+        # File handling for multipart/form-data
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename:
+                if allowed_file(file.filename):
+                    if existing_lesson['file_path'] and os.path.exists(existing_lesson['file_path']):
+                        os.remove(existing_lesson['file_path'])
+
+                    filename = secure_filename(file.filename)
+                    current_course_id = existing_lesson['course_id']
+                    current_module_name = data.get('module_name', existing_lesson['module'])
+
+                    course_name_for_path_row = conn.execute('SELECT name FROM courses WHERE id = ?', (current_course_id,)).fetchone()
+                    if not course_name_for_path_row:
+                        conn.close()
+                        return jsonify({'error': 'Associated course not found for file path construction.'}), 500
+                    course_name_for_path = secure_filename(course_name_for_path_row['name'])
+                    current_module_name = secure_filename(current_module_name)
+
+                    lesson_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], course_name_for_path, current_module_name)
+                    os.makedirs(lesson_upload_dir, exist_ok=True)
+                    new_file_path = os.path.join(lesson_upload_dir, filename)
+                    file.save(new_file_path)
+                    fields_to_update.append("file_path = ?")
+                    params.append(new_file_path)
+                else:
+                    conn.close()
+                    return jsonify({'error': f'New file type not allowed for {file.filename}'}), 400
+    else:
+        conn.close()
+        return jsonify({'error': 'Unsupported Content-Type'}), 415
+
+    if not fields_to_update:
+        file = request.files['file']
+        if file and file.filename: # If a new file is actually uploaded
+            if allowed_file(file.filename):
+                # Delete old file if it exists and is different
+                if existing_lesson['file_path'] and os.path.exists(existing_lesson['file_path']):
+                    # Potentially add logic here if new filename is same as old, to avoid deleting then re-adding.
+                    # For now, just remove old one.
+                    os.remove(existing_lesson['file_path'])
+
+                filename = secure_filename(file.filename)
+                # Need course_id and module_name to construct path, ensure they are current
+                current_course_id = existing_lesson['course_id']
+                current_module_name = data.get('module_name', existing_lesson['module'])
+
+                course_name_for_path = conn.execute('SELECT name FROM courses WHERE id = ?', (current_course_id,)).fetchone()['name']
+                course_name_for_path = secure_filename(course_name_for_path)
+                current_module_name = secure_filename(current_module_name)
+
+                lesson_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], course_name_for_path, current_module_name)
+                os.makedirs(lesson_upload_dir, exist_ok=True)
+                new_file_path = os.path.join(lesson_upload_dir, filename)
+                file.save(new_file_path)
+                fields_to_update.append("file_path = ?")
+                params.append(new_file_path)
+            else:
+                conn.close()
+                return jsonify({'error': f'New file type not allowed for {file.filename}'}), 400
+
+    if not fields_to_update:
+        conn.close()
+        return jsonify({'message': 'No fields to update'}), 200
+
+    params.append(lesson_id)
+
+    try:
+        cursor = conn.cursor()
+        query = f"UPDATE lessons SET {', '.join(fields_to_update)} WHERE id = ?"
+        cursor.execute(query, tuple(params))
+        conn.commit()
+        return jsonify({'message': 'Lesson element updated successfully'})
+    except Exception as e:
+        # Log e
+        return jsonify({'error': f'Database operation failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/admin/lessons/<int:lesson_id>', methods=['DELETE'])
+def api_admin_delete_lesson(lesson_id):
+    if not session.get('admin_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    conn = get_db_connection()
+    lesson = conn.execute('SELECT file_path FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+
+    if not lesson:
+        conn.close()
+        return jsonify({'error': 'Lesson not found'}), 404
+
+    try:
+        # Delete file from filesystem if it exists
+        if lesson['file_path'] and os.path.exists(lesson['file_path']):
+            os.remove(lesson['file_path'])
+
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM lessons WHERE id = ?", (lesson_id,))
+        conn.commit()
+        return jsonify({'message': 'Lesson element deleted successfully'})
+    except Exception as e:
+        # Log e
+        return jsonify({'error': f'Database operation failed or file deletion failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/admin/course-studio')
+def admin_course_studio_page():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+
+    # This HTML is a simplified version of the provided interactive course designer,
+    # focusing on structure. JS logic will be added incrementally.
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Vibes University - Course Design Studio</title>
+        <style>
+            body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+            .header-bar { background: rgba(255,255,255,0.1); padding: 1rem 2rem; color: #ff6b35; border-bottom: 1px solid #ff6b35;}
+            .studio-container { display: grid; grid-template-columns: 280px 1fr 320px; flex-grow: 1; gap: 1rem; padding: 1rem; overflow: hidden; }
+            .panel { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(255,107,53,0.2); overflow-y: auto; }
+            .panel-title { color: #ff6b35; font-size: 1.2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,107,53,0.3); }
+            .main-canvas-area { display: flex; flex-direction: column; }
+            .tabs { display: flex; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,107,53,0.3); }
+            .tab { padding: 0.8rem 1rem; background: none; border: none; color: #ccc; cursor: pointer; border-bottom: 2px solid transparent; }
+            .tab.active { color: #ff6b35; border-bottom-color: #ff6b35; }
+            .tab-content { display: none; flex-grow: 1; overflow-y: auto; }
+            .tab-content.active { display: block; }
+            .course-canvas { min-height: 400px; background: rgba(0,0,0,0.1); border: 2px dashed rgba(255,107,53,0.3); border-radius: 8px; padding: 1rem; }
+            /* Basic styles for buttons and inputs, similar to provided HTML */
+            button, input, select, textarea { background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,107,53,0.3); color: white; padding: 0.5em; border-radius: 5px; margin-bottom: 0.5em; }
+            button { cursor: pointer; background-color: #ff6b35; }
+            .element-btn { display: block; width: 100%; margin-bottom: 0.5rem; background: linear-gradient(45deg, #ff6b35, #f7931e); }
+        </style>
+    </head>
+    <body>
+        <div class="header-bar">
+            <h1>🎓 Course Design Studio</h1>
+        </div>
+        <div class="studio-container">
+            <!-- Left Panel: Course List & Element Palette -->
+            <div class="panel" id="left-panel">
+                <div class="panel-title">📚 Courses</div>
+                <div id="course-list-section">
+                    <button id="new-course-btn">New Course</button>
+                    <ul id="course-list"></ul>
+                </div>
+                <hr style="margin: 1rem 0; border-color: rgba(255,107,53,0.2);">
+                <div class="panel-title">➕ Add Element</div>
+                <div id="element-palette">
+                    <button class="element-btn" data-type="video">🎥 Video Lesson</button>
+                    <button class="element-btn" data-type="text">📝 Text Content</button>
+                    <button class="element-btn" data-type="quiz">❓ Interactive Quiz</button>
+                    <button class="element-btn" data-type="download">📁 Downloadable Resource</button>
+                    <!-- Add other element types from your HTML -->
+                </div>
+            </div>
+
+            <!-- Center Panel: Main Canvas & Tabs -->
+            <div class="panel main-canvas-area" id="center-panel">
+                <div class="tabs">
+                    <button class="tab active" data-tab="design">🎨 Design</button>
+                    <button class="tab" data-tab="preview">👁️ Preview</button>
+                    <button class="tab" data-tab="settings">⚙️ Settings</button>
+                </div>
+                <div id="design-tab" class="tab-content active">
+                    <div class="panel-title" id="current-course-title">Select or Create a Course</div>
+                    <div class="course-canvas" id="course-canvas-main">
+                        <!-- Modules and lessons will be rendered here by JavaScript -->
+                        <p>Drop elements here or select a module to add content.</p>
+                    </div>
+                </div>
+                <div id="preview-tab" class="tab-content">
+                    <p>Preview content will appear here.</p>
+                </div>
+                <div id="settings-tab" class="tab-content">
+                    <div class="panel-title">Course Settings</div>
+                    <form id="course-settings-form">
+                        <div><label>Title:</label><input type="text" id="setting-course-title" name="name"></div>
+                        <div><label>Description:</label><textarea id="setting-course-description" name="description"></textarea></div>
+                        <div><label>Difficulty:</label><input type="text" id="setting-course-difficulty" name="difficulty"></div>
+                        <!-- Add other settings fields -->
+                        <button type="button" id="save-course-settings-btn">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Panel: Properties Editor -->
+            <div class="panel" id="right-panel">
+                <div class="panel-title">⚙️ Properties</div>
+                <div id="properties-editor">
+                    <p>Select an element to edit its properties.</p>
+                    <!-- Property fields will be dynamically added here by JavaScript -->
+                </div>
+            </div>
+        </div>
+        <script>
+            // Basic tab switching logic
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+                    if (this.dataset.tab === 'settings' && window.selectedCourseId) {
+                        loadCourseSettings(window.selectedCourseId);
+                    }
+                });
+            });
+
+            let selectedCourseId = null;
+            const courseListUl = document.getElementById('course-list');
+            const newCourseBtn = document.getElementById('new-course-btn');
+            const currentCourseTitleEl = document.getElementById('current-course-title');
+            const courseSettingsForm = document.getElementById('course-settings-form');
+            const settingCourseTitleInput = document.getElementById('setting-course-title');
+            const settingCourseDescriptionInput = document.getElementById('setting-course-description');
+            const settingCourseDifficultyInput = document.getElementById('setting-course-difficulty');
+            const saveCourseSettingsBtn = document.getElementById('save-course-settings-btn');
+
+            async function fetchCourses() {
+                try {
+                    const response = await fetch('/api/admin/courses');
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const courses = await response.json();
+                    renderCourseList(courses);
+                } catch (error) {
+                    console.error("Failed to fetch courses:", error);
+                    courseListUl.innerHTML = '<li>Error loading courses.</li>';
+                }
+            }
+
+            function renderCourseList(courses) {
+                courseListUl.innerHTML = ''; // Clear existing list
+                if (courses.length === 0) {
+                    courseListUl.innerHTML = '<li>No courses yet. Create one!</li>';
+                    return;
+                }
+                courses.forEach(course => {
+                    const li = document.createElement('li');
+                    li.textContent = course.name;
+                    li.style.cursor = 'pointer';
+                    li.style.padding = '5px 0';
+                    li.dataset.courseId = course.id;
+                    li.addEventListener('click', () => loadCourse(course.id, course.name));
+                    courseListUl.appendChild(li);
+                });
+            }
+
+            async function loadCourse(courseId, courseName) {
+                selectedCourseId = courseId;
+                window.selectedCourseId = courseId; // Make it accessible for tab switcher
+                currentCourseTitleEl.textContent = `Editing: ${courseName}`;
+
+                try {
+                    const response = await fetch(`/api/admin/courses/${courseId}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const courseData = await response.json();
+                    renderCourseContent(courseData.lessons || []);
+                    // Load settings if settings tab is active
+                    if (document.querySelector('.tab[data-tab="settings"]').classList.contains('active')) {
+                        // Pass full courseData to avoid re-fetching
+                        populateCourseSettingsForm(courseData);
+                    }
+                } catch (error) {
+                    console.error(`Failed to load course content for ${courseName}:`, error);
+                    document.getElementById('course-canvas-main').innerHTML = `<p>Error loading lessons for ${courseName}.</p>`;
+                }
+            }
+
+            function renderCourseContent(lessons) {
+                const canvas = document.getElementById('course-canvas-main');
+                canvas.innerHTML = ''; // Clear previous content
+
+                if (!lessons || lessons.length === 0) {
+                    canvas.innerHTML = '<p>This course has no content yet. Add elements using the palette!</p>';
+                    return;
+                }
+
+                const modules = lessons.reduce((acc, lesson) => {
+                    const moduleName = lesson.module || 'Uncategorized';
+                    if (!acc[moduleName]) {
+                        acc[moduleName] = [];
+                    }
+                    acc[moduleName].push(lesson);
+                    return acc;
+                }, {});
+
+                for (const moduleName in modules) {
+                    const moduleDiv = document.createElement('div');
+                    moduleDiv.className = 'module-container';
+                    moduleDiv.innerHTML = `<h3 style="color:#ff8c42; margin-top:1rem; margin-bottom:0.5rem;">${moduleName}</h3>`;
+
+                    modules[moduleName].forEach(lesson => {
+                        const lessonDiv = document.createElement('div');
+                        lessonDiv.className = 'lesson-element-item'; // Add a class for styling
+                        lessonDiv.style.border = '1px solid #555';
+                        lessonDiv.style.padding = '10px';
+                        lessonDiv.style.marginBottom = '5px';
+                        lessonDiv.style.borderRadius = '4px';
+                        lessonDiv.style.cursor = 'pointer';
+                        lessonDiv.innerHTML = `
+                            <strong>${lesson.lesson}</strong> (Type: ${lesson.content_type}) <br>
+                            <small>Order: ${lesson.order_index}</small>
+                        `;
+                        // Store lesson data on the element for easy access later
+                        lessonDiv.dataset.lessonId = lesson.id;
+                        lessonDiv.dataset.orderIndex = lesson.order_index; // Store order index
+                        lessonDiv.dataset.moduleName = lesson.module; // Store module
+
+                        const lessonTitleEl = document.createElement('strong');
+                        lessonTitleEl.textContent = lesson.lesson;
+                        lessonDiv.appendChild(lessonTitleEl);
+                        lessonDiv.innerHTML += ` (Type: ${lesson.content_type}) <br><small>Order: ${lesson.order_index}</small>`;
+
+                        // Reorder buttons
+                        const upButton = document.createElement('button');
+                        upButton.textContent = '↑ Up';
+                        upButton.style.marginLeft = '10px';
+                        upButton.onclick = (e) => { e.stopPropagation(); moveLesson(lesson.id, 'up'); };
+
+                        const downButton = document.createElement('button');
+                        downButton.textContent = '↓ Down';
+                        downButton.style.marginLeft = '5px';
+                        downButton.onclick = (e) => { e.stopPropagation(); moveLesson(lesson.id, 'down'); };
+
+                        const controlsDiv = document.createElement('div');
+                        controlsDiv.style.float = 'right';
+                        controlsDiv.appendChild(upButton);
+                        controlsDiv.appendChild(downButton);
+                        lessonDiv.appendChild(controlsDiv);
+
+                        // Click on whole div to select for properties panel
+                        lessonDiv.onclick = () => {
+                            selectLessonElement(lesson);
+                        };
+
+                        moduleDiv.appendChild(lessonDiv);
+                    });
+                    canvas.appendChild(moduleDiv);
+                }
+            }
+
+            // Step 9: Implement Element Properties Panel
+            let currentSelectedLesson = null;
+            const propertiesEditor = document.getElementById('properties-editor');
+
+            function selectLessonElement(lessonData) {
+                currentSelectedLesson = lessonData; // Store the currently selected lesson data
+                // Highlight selected lesson
+                document.querySelectorAll('.lesson-element-item').forEach(el => el.style.backgroundColor = 'transparent');
+                const selectedDiv = document.querySelector(`.lesson-element-item[data-lesson-id='${lessonData.id}']`);
+                if(selectedDiv) selectedDiv.style.backgroundColor = 'rgba(255, 107, 53, 0.3)';
+
+                renderPropertiesForm(lessonData);
+            }
+
+            function renderPropertiesForm(lesson) {
+                propertiesEditor.innerHTML = ''; // Clear previous form
+
+                const form = document.createElement('form');
+                form.id = 'lesson-properties-form';
+                form.onsubmit = (e) => { e.preventDefault(); handleUpdateLesson(); };
+
+                // Common fields
+                form.innerHTML += `
+                    <h4>Edit: ${lesson.lesson} (ID: ${lesson.id})</h4>
+                    <div><label>Lesson Title:</label><input type="text" name="lesson_title" value="${lesson.lesson}" required></div>
+                    <div><label>Module Name:</label><input type="text" name="module_name" value="${lesson.module}" required></div>
+                    <div><label>Order Index:</label><input type="number" name="order_index" value="${lesson.order_index}" min="1" required></div>
+                    <div><label>Content Type:</label><input type="text" name="content_type" value="${lesson.content_type}" readonly></div>
+                `;
+
+                // Type-specific fields
+                switch (lesson.content_type) {
+                    case 'text':
+                        form.innerHTML += `<div><label>Markdown Content:</label><textarea name="markdown_content" rows="10">${lesson.element_properties.markdown_content || ''}</textarea></div>`;
+                        break;
+                    case 'video':
+                        form.innerHTML += `<div><label>Video URL (e.g., YouTube):</label><input type="url" name="video_url" value="${lesson.element_properties.url || ''}"></div>`;
+                        form.innerHTML += `<div><label>Video Duration:</label><input type="text" name="video_duration" value="${lesson.element_properties.duration || ''}"></div>`;
+                        // Add file input if you support self-hosted video uploads for this type
+                        form.innerHTML += `<div><label>Replace Video File (optional):</label><input type="file" name="file"></div>`;
+                        if(lesson.file_path) form.innerHTML += `<p><small>Current file: ${lesson.file_path.split('/').pop()}</small></p>`;
+                        break;
+                    case 'quiz':
+                        form.innerHTML += `<div><label>Quiz Question:</label><textarea name="quiz_question" rows="3">${lesson.element_properties.question || ''}</textarea></div>`;
+                        form.innerHTML += `<div><label>Options (one per line):</label><textarea name="quiz_options" rows="4">${(lesson.element_properties.options || []).join('\\n')}</textarea></div>`;
+                        form.innerHTML += `<div><label>Correct Answer Index (0-based):</label><input type="number" name="quiz_correct_answer_index" value="${lesson.element_properties.correct_answer_index || 0}" min="0"></div>`;
+                        break;
+                    case 'download':
+                        form.innerHTML += `<div><label>Resource File:</label><input type="file" name="file"></div>`;
+                        if(lesson.file_path) form.innerHTML += `<p><small>Current file: ${lesson.file_path.split('/').pop()}</small></p>`;
+                        break;
+                    // Add cases for other content types
+                }
+
+                form.innerHTML += '<button type="submit" style="margin-right: 10px;">Update Lesson</button>';
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.textContent = 'Delete Lesson';
+                deleteButton.style.backgroundColor = '#f44336'; // Red color for delete
+                deleteButton.onclick = () => handleDeleteLesson();
+                form.appendChild(deleteButton);
+
+                propertiesEditor.appendChild(form);
+            }
+
+            async function handleDeleteLesson() {
+                if (!currentSelectedLesson) {
+                    alert("No lesson selected for deletion.");
+                    return;
+                }
+                if (!confirm(`Are you sure you want to delete the lesson "${currentSelectedLesson.lesson}"? This cannot be undone.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/admin/lessons/${currentSelectedLesson.id}`, {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+                    alert('Lesson element deleted successfully!');
+                    if(selectedCourseId) {
+                         const courseName = currentCourseTitleEl.textContent.replace('Editing: ','');
+                         loadCourse(selectedCourseId, courseName); // Reload course
+                    }
+                    propertiesEditor.innerHTML = '<p>Select an element to edit its properties.</p>';
+                    currentSelectedLesson = null;
+                } catch (error) {
+                    console.error("Failed to delete lesson:", error);
+                    alert(`Error deleting lesson: ${error.message}`);
+                }
+            }
+
+            async function handleUpdateLesson() {
+                if (!currentSelectedLesson) {
+                    alert("No lesson selected for update.");
+                    return;
+                }
+
+                const form = document.getElementById('lesson-properties-form');
+                const formData = new FormData(form); // Use FormData for potential file uploads
+
+                // Prepare element_properties based on content type
+                let elementProps = {};
+                switch (currentSelectedLesson.content_type) {
+                    case 'text':
+                        elementProps.markdown_content = formData.get('markdown_content');
+                        break;
+                    case 'video':
+                        elementProps.url = formData.get('video_url');
+                        elementProps.duration = formData.get('video_duration');
+                        break;
+                    case 'quiz':
+                        elementProps.question = formData.get('quiz_question');
+                        elementProps.options = formData.get('quiz_options').split('\\n').map(opt => opt.trim()).filter(opt => opt);
+                        elementProps.correct_answer_index = parseInt(formData.get('quiz_correct_answer_index'));
+                        break;
+                }
+                formData.append('element_properties', JSON.stringify(elementProps));
+
+                // The 'content_type' from the form is readonly, so it's mainly for reference.
+                // If it were editable, we'd need to send it. For now, it's fixed for the lesson.
+                // formData.append('content_type', currentSelectedLesson.content_type);
+
+
+                try {
+                    const response = await fetch(`/api/admin/lessons/${currentSelectedLesson.id}`, {
+                        method: 'PUT',
+                        body: formData // FormData will set Content-Type to multipart/form-data
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    alert('Lesson updated successfully!');
+                    // Refresh course content on the canvas
+                    if(selectedCourseId) {
+                         const courseName = currentCourseTitleEl.textContent.replace('Editing: ','');
+                         loadCourse(selectedCourseId, courseName); // Reload the current course view
+                    }
+                    propertiesEditor.innerHTML = '<p>Select an element to edit its properties.</p>'; // Clear form
+                    currentSelectedLesson = null;
+
+                } catch (error) {
+                    console.error("Failed to update lesson:", error);
+                    alert(`Error updating lesson: ${error.message}`);
+                }
+            }
+
+            // Modified to accept courseData directly
+            function populateCourseSettingsForm(course) {
+                settingCourseTitleInput.value = course.name || '';
+                settingCourseDescriptionInput.value = course.description || '';
+                settingCourseDifficultyInput.value = course.course_settings && course.course_settings.difficulty ? course.course_settings.difficulty : '';
+            }
+
+            async function loadCourseSettings(courseId) {
+                if (!courseId) return;
+                try {
+                    const response = await fetch(`/api/admin/courses/${courseId}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const course = await response.json();
+
+                    settingCourseTitleInput.value = course.name || '';
+                    settingCourseDescriptionInput.value = course.description || '';
+                    // Assuming course_settings is an object with a difficulty key
+                    settingCourseDifficultyInput.value = course.course_settings && course.course_settings.difficulty ? course.course_settings.difficulty : '';
+                    // Populate other settings fields as needed
+                } catch (error) {
+                    console.error("Failed to load course settings:", error);
+                    alert("Error loading course settings.");
+                }
+            }
+
+            newCourseBtn.addEventListener('click', async () => {
+                const courseName = prompt("Enter new course name:");
+                if (!courseName) return;
+                const courseDescription = prompt("Enter course description:");
+                if (courseDescription === null) return; // User cancelled
+
+                try {
+                    const response = await fetch('/api/admin/courses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: courseName, description: courseDescription, settings: { difficulty: "Beginner" } }) // Default difficulty
+                    });
+                    if (!response.ok) {
+                         const errorData = await response.json();
+                         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+                    await response.json(); // Contains course_id
+                    fetchCourses(); // Refresh list
+                    alert('Course created successfully!');
+                } catch (error) {
+                    console.error("Failed to create course:", error);
+                    alert(`Error creating course: ${error.message}`);
+                }
+            });
+
+            saveCourseSettingsBtn.addEventListener('click', async () => {
+                if (!selectedCourseId) {
+                    alert("No course selected to save settings for.");
+                    return;
+                }
+                const settingsPayload = {
+                    name: settingCourseTitleInput.value,
+                    description: settingCourseDescriptionInput.value,
+                    settings: { // Assuming other settings are grouped under 'settings' in your API
+                        difficulty: settingCourseDifficultyInput.value
+                        // Add other settings from the form
+                    }
+                };
+
+                try {
+                    const response = await fetch(`/api/admin/courses/${selectedCourseId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settingsPayload)
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+                    await response.json();
+                    alert('Course settings saved successfully!');
+                    fetchCourses(); // Refresh course list in case name changed
+                    currentCourseTitleEl.textContent = `Editing: ${settingsPayload.name}`; // Update title if name changed
+                } catch (error) {
+                    console.error("Failed to save course settings:", error);
+                    alert(`Error saving settings: ${error.message}`);
+                }
+            });
+
+
+            // Initial fetch of courses
+            fetchCourses();
+
+            async function moveLesson(lessonIdToMove, direction) {
+                if (!selectedCourseId) return;
+
+                const courseName = currentCourseTitleEl.textContent.replace('Editing: ','');
+                let lessonsInCourse = [];
+                try {
+                    const response = await fetch(`/api/admin/courses/${selectedCourseId}`);
+                    const courseData = await response.json();
+                    lessonsInCourse = courseData.lessons || [];
+                } catch (error) {
+                    console.error("Failed to fetch lessons for reordering:", error);
+                    alert("Error fetching lesson data. Cannot reorder.");
+                    return;
+                }
+
+                const lessonToMove = lessonsInCourse.find(l => l.id == lessonIdToMove);
+                if (!lessonToMove) {
+                    alert("Could not find the lesson to move.");
+                    return;
+                }
+
+                const lessonsInSameModule = lessonsInCourse.filter(l => l.module === lessonToMove.module).sort((a, b) => a.order_index - b.order_index);
+                const currentIndex = lessonsInSameModule.findIndex(l => l.id == lessonIdToMove);
+
+                let otherLesson = null;
+                if (direction === 'up' && currentIndex > 0) {
+                    otherLesson = lessonsInSameModule[currentIndex - 1];
+                } else if (direction === 'down' && currentIndex < lessonsInSameModule.length - 1) {
+                    otherLesson = lessonsInSameModule[currentIndex + 1];
+                }
+
+                if (otherLesson) {
+                    // Swap order_index
+                    const tempOrderIndex = lessonToMove.order_index;
+                    lessonToMove.order_index = otherLesson.order_index;
+                    otherLesson.order_index = tempOrderIndex;
+
+                    try {
+                        // Update both lessons in parallel (or sequentially)
+                        const updatePayload1 = new FormData();
+                        updatePayload1.append('order_index', lessonToMove.order_index);
+                        // Important: also include other essential fields if your PUT expects them or can partially update
+                        // For now, assuming partial update of order_index is fine. If not, fetch full lesson, modify, then PUT.
+                        // To be safe, let's send minimal required data for an update, assuming API can handle sparse updates for order_index
+                        // For element_properties, if not changing, it's best to send existing one if API requires it.
+                        // Let's assume for now the API can handle just an order_index update.
+                        // If not, the PUT API for lesson needs to be more flexible or we fetch full lesson data.
+
+                        const response1 = await fetch(`/api/admin/lessons/${lessonToMove.id}`, {
+                            method: 'PUT',
+                            body: updatePayload1 // This will be empty if only order_index is sent and API expects more
+                        });
+                         // A better way for partial update:
+                        const updateData1 = { order_index: lessonToMove.order_index };
+                        const response1_alt = await fetch(`/api/admin/lessons/${lessonToMove.id}`, {
+                             method: 'PUT',
+                             headers: { 'Content-Type': 'application/json' }, // Sending JSON for partial update
+                             body: JSON.stringify(updateData1)
+                        });
+
+
+                        const updatePayload2 = new FormData();
+                        updatePayload2.append('order_index', otherLesson.order_index);
+                        const response2 = await fetch(`/api/admin/lessons/${otherLesson.id}`, {
+                            method: 'PUT',
+                            body: updatePayload2 // Same issue as above
+                        });
+                        const updateData2 = { order_index: otherLesson.order_index };
+                        const response2_alt = await fetch(`/api/admin/lessons/${otherLesson.id}`, {
+                             method: 'PUT',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify(updateData2)
+                        });
+
+
+                        // Check responses if needed, for now assume they work if no error
+                        // if (!response1.ok || !response2.ok) throw new Error("Failed to update lesson order.");
+                        if (!response1_alt.ok || !response2_alt.ok) {
+                             const err1 = await response1_alt.text();
+                             const err2 = await response2_alt.text();
+                             throw new Error(`Failed to update lesson order. Server1: ${err1}, Server2: ${err2}`);
+                        }
+
+
+                        loadCourse(selectedCourseId, courseName); // Refresh view
+                    } catch (error) {
+                        console.error("Error reordering lessons:", error);
+                        alert("Error reordering lessons: " + error.message);
+                        // Potentially revert optimistic update or reload original state
+                        loadCourse(selectedCourseId, courseName);
+                    }
+                } else {
+                    // console.log("Cannot move further in this direction or no lesson to swap with.");
+                }
+            }
+
+
+            // Step 10: Implement Adding New Elements
+            const elementPalette = document.getElementById('element-palette');
+            elementPalette.addEventListener('click', async (event) => {
+                if (event.target.classList.contains('element-btn')) {
+                    const elementType = event.target.dataset.type;
+                    if (!selectedCourseId) {
+                        alert("Please select or create a course first before adding elements.");
+                        return;
+                    }
+
+                    const lessonTitle = prompt(`Enter title for the new ${elementType} element:`);
+                    if (!lessonTitle) return;
+
+                    const moduleName = prompt("Enter module name for this element (e.g., Module 1):", "Module 1");
+                    if (!moduleName) return;
+
+                    // Simple way to get order_index: count existing lessons in this module + 1
+                    // This should be refined if strict ordering within modules is critical from the start
+                    let orderIndex = 1;
+                    try {
+                        const courseDataResponse = await fetch(`/api/admin/courses/${selectedCourseId}`);
+                        const courseData = await courseDataResponse.json();
+                        if(courseData.lessons) {
+                            const lessonsInModule = courseData.lessons.filter(l => l.module === moduleName);
+                            orderIndex = lessonsInModule.length + 1;
+                        }
+                    } catch(e) { console.error("Error fetching lessons for order_index", e); }
+
+
+                    const formData = new FormData();
+                    formData.append('lesson_title', lessonTitle);
+                    formData.append('module_name', moduleName);
+                    formData.append('content_type', elementType);
+                    formData.append('order_index', orderIndex);
+
+                    let elementProps = {}; // Default empty properties
+
+                    if (elementType === 'video' || elementType === 'download') {
+                        const fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        // For a better UX, this should be part of a modal/form, not just a prompt then a file dialog
+                        alert("You will now be prompted to select a file for this element.");
+                        fileInput.onchange = async () => {
+                            if (fileInput.files.length > 0) {
+                                formData.append('file', fileInput.files[0]);
+                            }
+                            // Specific props for video (even if no file, URL might be used)
+                            if(elementType === 'video') {
+                                const videoUrl = prompt("Enter video URL (e.g., YouTube, Vimeo) if not uploading a file directly:", "");
+                                elementProps.url = videoUrl;
+                                elementProps.duration = prompt("Enter video duration (e.g., 30 mins):", "30 mins");
+                            }
+                            formData.append('element_properties', JSON.stringify(elementProps));
+                            await sendCreateLessonRequest(formData);
+                        };
+                        fileInput.click(); // Open file dialog
+                        // If user cancels file dialog, the request won't be sent unless we handle it.
+                        // For simplicity, if file is core, and they cancel, nothing happens.
+                        // If file is optional (like for video URL type), we might need to send without it.
+                        if(elementType === 'video' && !confirm("Do you want to select a file? Click OK for file, Cancel to only use URL.")){
+                             formData.append('element_properties', JSON.stringify(elementProps));
+                             await sendCreateLessonRequest(formData); // Send without file if video URL is primary
+                        }
+
+
+                    } else {
+                        // For non-file types like text or quiz, prompt for initial properties
+                        if (elementType === 'text') {
+                            elementProps.markdown_content = prompt("Enter initial Markdown content (optional):", "# New Text Lesson\n\nStart writing...");
+                        } else if (elementType === 'quiz') {
+                            elementProps.question = prompt("Enter quiz question:", "What is...?");
+                            elementProps.options = ["Option A", "Option B"]; // Default options
+                            elementProps.correct_answer_index = 0;
+                            alert("Default quiz options added. Edit further in properties panel.");
+                        }
+                        formData.append('element_properties', JSON.stringify(elementProps));
+                        await sendCreateLessonRequest(formData);
+                    }
+                }
+            });
+
+            async function sendCreateLessonRequest(formData) {
+                try {
+                    const response = await fetch(`/api/admin/courses/${selectedCourseId}/lessons`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+                    alert('New lesson element added successfully!');
+                    // Refresh course content
+                    const courseName = currentCourseTitleEl.textContent.replace('Editing: ','');
+                    loadCourse(selectedCourseId, courseName);
+                } catch (error) {
+                    console.error("Failed to add lesson element:", error);
+                    alert(`Error adding element: ${error.message}`);
+                }
+            }
+
+        </script>
+    </body>
+    </html>
+    """)
+
+# --- End of API endpoints for new Interactive Course Designer ---
 
 if __name__ == '__main__':
     # Initialize database
