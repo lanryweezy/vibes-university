@@ -1752,7 +1752,13 @@ def admin_course_studio_page():
                     const moduleDiv = document.createElement('div');
                     Object.assign(moduleDiv, { className: 'module-container', dataset: { moduleId: module.id, moduleOrderIndex: module.order_index }, draggable: true, style: "cursor:move; border:1px dashed #777; padding:15px; margin-bottom:15px; border-radius:5px;" });
                     moduleDiv.addEventListener('dragstart', (e) => { if (e.target === moduleDiv) { draggedModuleId = module.id; e.dataTransfer.setData('text/module-id', module.id); e.target.style.opacity = '0.5'; e.target.classList.add('dragging-item'); draggedLessonId = null; }});
-                    moduleDiv.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h3 style="color:#ff8c42; margin-top:0; margin-bottom:0;">${module.name}</h3><button class="edit-module-btn" data-module-id="${module.id}" data-module-name="${module.name}" data-module-desc="${module.description || ''}" data-module-order="${module.order_index}" style="font-size:0.8em; padding:3px 8px;">Edit Module</button></div>`;
+                    moduleDiv.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                               <h3 style="color:#ff8c42; margin-top:0; margin-bottom:0;">${module.name}</h3>
+                                               <div>
+                                                   <button class="edit-module-btn" data-module-id="${module.id}" data-module-name="${module.name}" data-module-desc="${module.description || ''}" data-module-order="${module.order_index}" style="font-size:0.8em; padding:3px 8px; margin-right: 5px;">Edit Module</button>
+                                                   <button class="delete-module-btn" data-module-id="${module.id}" style="font-size:0.8em; padding:3px 8px; background-color:#d9534f;">Delete Module</button>
+                                               </div>
+                                           </div>`;
                     const lessonsInModule = (lessons || []).filter(l => l.module_id === module.id).sort((a,b) => a.order_index - b.order_index);
                     const lessonsContainer = document.createElement('div');
                     lessonsContainer.className = 'lessons-in-module-container';
@@ -1958,6 +1964,38 @@ def admin_course_studio_page():
                 if (event.target.classList.contains('edit-module-btn') && !event.target.closest('#properties-editor')) {
                     const button = event.target;
                     handleEditModuleClick(button.dataset.moduleId, button.dataset.moduleName, button.dataset.moduleDesc, button.dataset.moduleOrder);
+                } else if (event.target.classList.contains('delete-module-btn')) {
+                    const button = event.target;
+                    const moduleId = button.dataset.moduleId;
+                    const moduleContainer = button.closest('.module-container');
+                    const moduleName = moduleContainer ? (moduleContainer.querySelector('h3')?.textContent || 'this module') : 'this module';
+
+                    if (confirm(`Are you sure you want to delete the module "${moduleName}"? This action cannot be undone and will fail if the module contains lessons.`)) {
+                        fetch(`/api/admin/modules/${moduleId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                // Try to parse error JSON, otherwise use status text
+                                return response.json().then(err => { throw new Error(err.error || `HTTP error! Status: ${response.status}`); })
+                                                   .catch(() => { throw new Error(`HTTP error! Status: ${response.status}`); });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            alert(data.message || 'Module deleted successfully!');
+                            if (selectedCourseId && currentCourseData) {
+                                loadCourse(selectedCourseId, currentCourseData.name);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Failed to delete module:', error);
+                            alert(`Error deleting module: ${error.message}`);
+                        });
+                    }
                 }
             });
 
