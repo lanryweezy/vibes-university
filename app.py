@@ -101,7 +101,10 @@ def init_db():
             lesson_id INTEGER NOT NULL,
             completed BOOLEAN DEFAULT 0,
             completed_at TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+            FOREIGN KEY (lesson_id) REFERENCES lessons (id) ON DELETE CASCADE,
+            UNIQUE (user_id, course_id, lesson_id)
         )
     ''')
     
