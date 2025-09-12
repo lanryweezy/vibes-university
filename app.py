@@ -12,13 +12,12 @@ from werkzeug.utils import secure_filename
 import markdown
 import re
 
-# Import blueprints
+# Import and register blueprints
 from blueprints.main_routes import main_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Register Blueprints
 app.register_blueprint(main_bp)
 
 # Configuration
@@ -208,18 +207,6 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
-
-@app.route('/')
-def home():
-    """Serve the main course platform page"""
-    try:
-        # The index.html is in the root directory of the project.
-        # So we can just open it.
-        index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
-        with open(index_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "index.html not found.", 404
 
 @app.route('/api/register', methods=['POST'])
 def register():
