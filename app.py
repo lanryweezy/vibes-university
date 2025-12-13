@@ -12,26 +12,46 @@ from werkzeug.utils import secure_filename
 import markdown
 import re
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Import security utilities
+from utils.security_utils import hash_password, verify_password, validate_email, validate_phone, sanitize_input, get_env_variable
+# Import security middleware
+from utils.security_middleware import SecurityMiddleware
+
+# Import utilities
+from utils.db_utils import db_manager, get_db_connection, return_db_connection, get_db_cursor
+from utils.logging_utils import app_logger, db_logger, security_logger, payment_logger, log_info, log_error, log_warning
+from utils.rate_limiter import rate_limit
+
 # Import and register blueprints
 from blueprints.main_routes import main_bp
+from blueprints.teacher_auth_routes import teacher_auth_bp
+from blueprints.teacher_courses_routes import teacher_courses_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
+# Initialize security middleware
+security_middleware = SecurityMiddleware(app)
+
 app.register_blueprint(main_bp)
+app.register_blueprint(teacher_auth_bp)
+app.register_blueprint(teacher_courses_bp)
 
 # Configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'vibes-university-secret-key')
-DATABASE = 'vibes_university.db'
+app.config['SECRET_KEY'] = get_env_variable('SECRET_KEY', 'vibes-university-secret-key')
 
 # Payment Gateway Configuration
-PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_your_paystack_secret_key')
-FLUTTERWAVE_SECRET_KEY = os.environ.get('FLUTTERWAVE_SECRET_KEY', 'FLWSECK_TEST-your_flutterwave_secret_key')
+PAYSTACK_SECRET_KEY = get_env_variable('PAYSTACK_SECRET_KEY', 'sk_test_your_paystack_secret_key')
+FLUTTERWAVE_SECRET_KEY = get_env_variable('FLUTTERWAVE_SECRET_KEY', 'FLWSECK_TEST-your_flutterwave_secret_key')
 
 app.secret_key = app.config['SECRET_KEY']
 
 # Admin config (for demo, use env var or DB in production)
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'vibesadmin123')
+ADMIN_PASSWORD = get_env_variable('ADMIN_PASSWORD', 'vibesadmin123')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'courses')
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'zip', 'rar', '7z', 'mp3', 'wav', 'aac', 'ogg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -56,219 +76,125 @@ def get_file_icon(filename):
 
 def init_db():
     """Initialize the database with required tables"""
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    
-    # Courses table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS courses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            description TEXT,
-            course_settings TEXT, -- JSON for additional settings like difficulty, duration
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    # Users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            full_name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
-        )
-    ''')
-    
-    # Enrollments table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS enrollments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            course_type TEXT NOT NULL,
-            price INTEGER NOT NULL,
-            payment_method TEXT NOT NULL,
-            payment_status TEXT DEFAULT 'pending',
-            payment_reference TEXT,
-            enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    
-    # Course progress table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS course_progress (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            course_id INTEGER NOT NULL,
-            lesson_id INTEGER NOT NULL,
-            completed BOOLEAN DEFAULT 0,
-            completed_at TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-            FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
-            FOREIGN KEY (lesson_id) REFERENCES lessons (id) ON DELETE CASCADE,
-            UNIQUE (user_id, course_id, lesson_id)
-        )
-    ''')
-    
-    # Payment logs table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS payment_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            amount INTEGER NOT NULL,
-            payment_method TEXT NOT NULL,
-            gateway_response TEXT,
-            status TEXT NOT NULL,
-            reference TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    
-    # Modules table (New)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS modules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            description TEXT,
-            order_index INTEGER NOT NULL DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (course_id) REFERENCES courses (id)
-        )
-    ''')
-
-    # Lessons table (Modified: module -> module_id)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS lessons (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            course_id INTEGER NOT NULL,
-            module_id INTEGER NOT NULL,
-            lesson TEXT,
-            description TEXT,
-            file_path TEXT,
-            element_properties TEXT,
-            content_type TEXT DEFAULT 'file',
-            order_index INTEGER DEFAULT 1,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (course_id) REFERENCES courses (id),
-            FOREIGN KEY (module_id) REFERENCES modules (id)
-        )
-    ''')
-
-    # Quiz Attempts table (New)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS quiz_attempts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            lesson_id INTEGER NOT NULL, -- The ID of the quiz lesson
-            course_id INTEGER NOT NULL, -- The course this quiz belongs to
-            attempt_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            submitted_answers TEXT,    -- JSON of submitted answer, e.g., {"answer_index": 1}
-            is_correct BOOLEAN,
-            score INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (lesson_id) REFERENCES lessons (id),
-            FOREIGN KEY (course_id) REFERENCES courses (id)
-        )
-    ''')
-    
-    # Announcements table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS announcements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            message TEXT NOT NULL,
-            priority TEXT DEFAULT 'normal',
-            target_audience TEXT DEFAULT 'all',
-            is_active BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP
-        )
-    ''')
-    
-    try:
-        cursor.execute('ALTER TABLE lessons ADD COLUMN content_type TEXT DEFAULT "file"')
-    except sqlite3.OperationalError:
-        pass
-    
-    try:
-        cursor.execute('ALTER TABLE lessons ADD COLUMN order_index INTEGER DEFAULT 1')
-    except sqlite3.OperationalError:
-        pass
-    
-    conn.commit()
-    conn.close()
+    db_manager.initialize_database()
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return db_manager.get_connection()
 
 @app.route('/api/register', methods=['POST'])
+@rate_limit('auth')
 def register():
     try:
         data = request.get_json()
         required_fields = ['email', 'password', 'full_name', 'phone']
         for field in required_fields:
             if not data.get(field):
+                log_warning(app_logger, "Registration failed - missing field", missing_field=field)
                 return jsonify({'error': f'{field} is required'}), 400
         
-        conn = get_db_connection()
-        existing_user = conn.execute('SELECT id FROM users WHERE email = ?', (data['email'],)).fetchone()
-        if existing_user:
-            conn.close()
-            return jsonify({'error': 'User already exists'}), 400
+        # Validate email format
+        if not validate_email(data['email']):
+            log_warning(app_logger, "Registration failed - invalid email format", email=data['email'])
+            return jsonify({'error': 'Invalid email format'}), 400
         
-        password_hash = generate_password_hash(data['password'])
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)',
-                       (data['email'], password_hash, data['full_name'], data['phone']))
-        user_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'User registered successfully', 'user_id': user_id})
+        # Validate phone format
+        if not validate_phone(data['phone']):
+            log_warning(app_logger, "Registration failed - invalid phone format", phone=data['phone'])
+            return jsonify({'error': 'Invalid phone number format'}), 400
+        
+        # Sanitize inputs
+        full_name = sanitize_input(data['full_name'])
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            existing_user = conn.execute('SELECT id FROM users WHERE email = ?', (data['email'],)).fetchone()
+            if existing_user:
+                log_info(app_logger, "Registration failed - user already exists", email=data['email'])
+                return jsonify({'error': 'User already exists'}), 400
+            
+            password_hash = generate_password_hash(data['password'])
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)',
+                           (data['email'], password_hash, full_name, data['phone']))
+            user_id = cursor.lastrowid
+            conn.commit()
+            log_info(app_logger, "User registered successfully", user_id=user_id, email=data['email'])
+            return jsonify({'success': True, 'message': 'User registered successfully', 'user_id': user_id})
+        except Exception as e:
+            log_error(app_logger, "Registration failed with exception", error=str(e))
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
     except Exception as e:
+        log_error(app_logger, "Registration failed with exception", error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
+@rate_limit('auth')
 def login():
     try:
         data = request.get_json()
         if not data.get('email') or not data.get('password'):
+            log_warning(app_logger, "Login failed - missing credentials")
             return jsonify({'error': 'Email and password are required'}), 400
         
-        conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE email = ?', (data['email'],)).fetchone()
-        conn.close()
+        # Validate email format
+        if not validate_email(data['email']):
+            log_warning(app_logger, "Login failed - invalid email format", email=data['email'])
+            return jsonify({'error': 'Invalid email format'}), 400
         
-        if not user or not check_password_hash(user['password_hash'], data['password']):
-            return jsonify({'error': 'Invalid credentials'}), 401
+        conn = None
+        try:
+            conn = get_db_connection()
+            user = conn.execute('SELECT * FROM users WHERE email = ?', (data['email'],)).fetchone()
+            
+            if not user or not check_password_hash(user['password_hash'], data['password']):
+                log_info(app_logger, "Login failed - invalid credentials", email=data.get('email'))
+                return jsonify({'error': 'Invalid credentials'}), 401
+        except Exception as e:
+            log_error(app_logger, "Login failed with exception", error=str(e))
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
         
+        log_info(app_logger, "User logged in successfully", user_id=user['id'], email=user['email'])
         return jsonify({'success': True, 'user': {'id': user['id'], 'email': user['email'], 'full_name': user['full_name'], 'phone': user['phone']}})
     except Exception as e:
+        log_error(app_logger, "Login failed with exception", error=str(e))
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/initiate-payment', methods=['POST'])
+@rate_limit('api')
 def initiate_payment():
     try:
         data = request.get_json()
         required_fields = ['user_id', 'course_type', 'price', 'payment_method']
         for field in required_fields:
             if not data.get(field):
+                log_warning(payment_logger, "Payment initiation failed - missing field", missing_field=field)
                 return jsonify({'error': f'{field} is required'}), 400
         
         payment_reference = f"VU_{data['user_id']}_{int(datetime.now().timestamp())}"
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO enrollments (user_id, course_type, price, payment_method, payment_reference) VALUES (?, ?, ?, ?, ?)',
-                       (data['user_id'], data['course_type'], data['price'], data['payment_method'], payment_reference))
-        enrollment_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO enrollments (user_id, course_type, price, payment_method, payment_reference) VALUES (?, ?, ?, ?, ?)',
+                           (data['user_id'], data['course_type'], data['price'], data['payment_method'], payment_reference))
+            enrollment_id = cursor.lastrowid
+            conn.commit()
+        except Exception as e:
+            log_error(payment_logger, "Payment initiation failed with exception", error=str(e))
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
+        
+        log_info(payment_logger, "Enrollment created", enrollment_id=enrollment_id, user_id=data['user_id'], course_type=data['course_type'], price=data['price'])
         
         payment_url = ""
         if data['payment_method'] == 'card':
@@ -278,10 +204,13 @@ def initiate_payment():
         elif data['payment_method'] == 'crypto':
             payment_url = initiate_crypto_payment(data, payment_reference)
         else:
+            log_warning(payment_logger, "Payment initiation failed - invalid payment method", payment_method=data['payment_method'])
             return jsonify({'error': 'Invalid payment method'}), 400
         
+        log_info(payment_logger, "Payment initiated successfully", enrollment_id=enrollment_id, payment_reference=payment_reference, payment_method=data['payment_method'])
         return jsonify({'success': True, 'payment_reference': payment_reference, 'payment_url': payment_url, 'enrollment_id': enrollment_id})
     except Exception as e:
+        log_error(payment_logger, "Payment initiation failed with exception", error=str(e))
         return jsonify({'error': str(e)}), 500
 
 def initiate_paystack_payment(data, reference):
@@ -306,25 +235,38 @@ def initiate_crypto_payment(data, reference):
         return f"https://vibesuniversity.com/crypto-payment?reference={reference}"
 
 @app.route('/api/verify-payment', methods=['POST'])
+@rate_limit('api')
 def verify_payment():
     try:
         data = request.get_json()
         reference = data.get('reference')
-        if not reference: return jsonify({'error': 'Payment reference is required'}), 400
+        if not reference: 
+            log_warning(payment_logger, "Payment verification failed - missing reference")
+            return jsonify({'error': 'Payment reference is required'}), 400
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE enrollments SET payment_status = 'completed' WHERE payment_reference = ?", (reference,))
-        enrollment = conn.execute("SELECT e.*, u.email, u.full_name FROM enrollments e JOIN users u ON e.user_id = u.id WHERE e.payment_reference = ?", (reference,)).fetchone()
-        conn.commit()
-        conn.close()
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE enrollments SET payment_status = 'completed' WHERE payment_reference = ?", (reference,))
+            enrollment = conn.execute("SELECT e.*, u.email, u.full_name FROM enrollments e JOIN users u ON e.user_id = u.id WHERE e.payment_reference = ?", (reference,)).fetchone()
+            conn.commit()
+        except Exception as e:
+            log_error(payment_logger, "Payment verification failed with exception", error=str(e))
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
         
         if enrollment:
             send_course_access(enrollment)
+            log_info(payment_logger, "Payment verified successfully", enrollment_id=enrollment['id'], user_id=enrollment['user_id'], course_type=enrollment['course_type'])
             return jsonify({'success': True, 'message': 'Payment verified successfully', 'enrollment': dict(enrollment)})
         else:
+            log_warning(payment_logger, "Payment verification failed - enrollment not found", reference=reference)
             return jsonify({'error': 'Enrollment not found'}), 404
     except Exception as e:
+        log_error(payment_logger, "Payment verification failed with exception", error=str(e))
         return jsonify({'error': str(e)}), 500
 
 def send_course_access(enrollment):
@@ -333,65 +275,110 @@ def send_course_access(enrollment):
 
 @app.route('/api/courses', methods=['GET'])
 def get_courses():
-    conn = get_db_connection()
-    courses_data = conn.execute("SELECT id, name, description, course_settings FROM courses ORDER BY created_at DESC").fetchall()
-    conn.close()
-    
-    output_courses = []
-    for course_row in courses_data:
-        course_dict = dict(course_row)
-        try:
-            course_dict['course_settings'] = json.loads(course_row['course_settings']) if course_row['course_settings'] else {}
-        except:
-            course_dict['course_settings'] = course_row['course_settings'] if course_row['course_settings'] else {}
-        output_courses.append(course_dict)
-    return jsonify({'courses': output_courses})
+    conn = None
+    try:
+        conn = get_db_connection()
+        courses_data = conn.execute("SELECT id, name, description, course_settings FROM courses ORDER BY created_at DESC").fetchall()
+        
+        output_courses = []
+        for course_row in courses_data:
+            course_dict = dict(course_row)
+            try:
+                course_dict['course_settings'] = json.loads(course_row['course_settings']) if course_row['course_settings'] else {}
+            except:
+                course_dict['course_settings'] = course_row['course_settings'] if course_row['course_settings'] else {}
+            output_courses.append(course_dict)
+        return jsonify({'courses': output_courses})
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve courses", error=str(e))
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route('/api/user-progress/<int:user_id>', methods=['GET'])
 def get_user_progress(user_id):
+    # Check if user is authenticated
+    enrollment = session.get('enrollment')
+    if not enrollment:
+        log_warning(security_logger, "Unauthorized access attempt to user progress", user_id=user_id)
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    # Check if user is requesting their own data
+    if enrollment.get('user_id') != user_id:
+        log_warning(security_logger, "Unauthorized access attempt to another user's progress", requester_id=enrollment.get('user_id'), target_id=user_id)
+        return jsonify({'error': 'Not authorized to access this data'}), 403
+    
+    conn = None
     try:
         conn = get_db_connection()
         enrollments = conn.execute("SELECT * FROM enrollments WHERE user_id = ? AND payment_status = 'completed'", (user_id,)).fetchall()
         progress = conn.execute("SELECT * FROM course_progress WHERE user_id = ?", (user_id,)).fetchall()
-        conn.close()
+        log_info(app_logger, "User progress retrieved successfully", user_id=user_id)
         return jsonify({'enrollments': [dict(row) for row in enrollments], 'progress': [dict(row) for row in progress]})
     except Exception as e:
+        log_error(app_logger, "Failed to retrieve user progress", user_id=user_id, error=str(e))
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/update-progress', methods=['POST'])
 def update_progress():
     try:
         data = request.get_json()
         required = ['user_id', 'course_id', 'lesson_id']
-        if not all(data.get(f) for f in required): return jsonify({'error': 'Missing required fields'}), 400
+        for field in required:
+            if not data.get(field):
+                log_warning(app_logger, "Update progress failed - missing field", missing_field=field)
+                return jsonify({'error': f'{field} is required'}), 400
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        existing = conn.execute("SELECT id FROM course_progress WHERE user_id = ? AND course_id = ? AND lesson_id = ?",
-                                (data['user_id'], data['course_id'], data['lesson_id'])).fetchone()
-        if existing:
-            cursor.execute("UPDATE course_progress SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE id = ?", (existing['id'],))
-        else:
-            cursor.execute("INSERT INTO course_progress (user_id, course_id, lesson_id, completed, completed_at) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)",
-                           (data['user_id'], data['course_id'], data['lesson_id']))
-        conn.commit()
-        conn.close()
+        # Validate that IDs are integers
+        try:
+            user_id = int(data['user_id'])
+            course_id = int(data['course_id'])
+            lesson_id = int(data['lesson_id'])
+        except (ValueError, TypeError):
+            log_warning(app_logger, "Update progress failed - invalid ID format")
+            return jsonify({'error': 'Invalid ID format'}), 400
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            existing = conn.execute("SELECT id FROM course_progress WHERE user_id = ? AND course_id = ? AND lesson_id = ?",
+                                    (user_id, course_id, lesson_id)).fetchone()
+            if existing:
+                cursor.execute("UPDATE course_progress SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE id = ?", (existing['id'],))
+            else:
+                cursor.execute("INSERT INTO course_progress (user_id, course_id, lesson_id, completed, completed_at) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)",
+                               (user_id, course_id, lesson_id))
+            conn.commit()
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
+        log_info(app_logger, "Progress updated successfully", user_id=user_id, course_id=course_id, lesson_id=lesson_id)
         return jsonify({'success': True, 'message': 'Progress updated'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
+    conn = None
     try:
         conn = get_db_connection()
         user_count = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
         enrollment_count = conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE payment_status = 'completed'").fetchone()['count']
         total_revenue = conn.execute("SELECT SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()['total'] or 0
-        conn.close()
         return jsonify({'users': user_count, 'enrollments': enrollment_count, 'revenue': total_revenue, 'success_rate': '97%', 'average_income': '₦1,200,000'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/testimonials', methods=['GET'])
 def get_testimonials():
@@ -405,40 +392,58 @@ def pay():
     plan = plans.get(selected_plan_key, plans['course'])
     message = ''
     if request.method == 'POST':
-        name = request.form.get('name')
+        name = sanitize_input(request.form.get('name'))
         email = request.form.get('email')
         phone = request.form.get('phone')
         plan_key_from_form = request.form.get('plan')
-        plan_for_payment = plans.get(plan_key_from_form, plans['course'])
-        price = plan_for_payment['price']
         
-        conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-        user_id = 0
-        if not user:
-            password_hash = generate_password_hash(secrets.token_hex(8))
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)',
-                           (email, password_hash, name, phone))
-            user_id = cursor.lastrowid
-            conn.commit()
+        # Validate inputs
+        if not email or not validate_email(email):
+            message = 'Valid email is required.'
+        elif not phone or not validate_phone(phone):
+            message = 'Valid phone number is required.'
+        elif not name:
+            message = 'Name is required.'
         else:
-            user_id = user['id']
-        conn.close()
+            plan_for_payment = plans.get(plan_key_from_form, plans['course'])
+            price = plan_for_payment['price']
         
-        payment_data = { 'user_id': user_id, 'course_type': plan_key_from_form, 'price': price, 'payment_method': 'card', 'email': email }
-        
-        with app.test_request_context():
-            with app.test_client() as client:
-                resp = client.post(url_for('initiate_payment'), json=payment_data)
-                resp_json = resp.get_json()
-        
-        if resp_json and resp_json.get('success'):
-            session['pending_reference'] = resp_json['payment_reference']
-            session['user_id'] = user_id
-            return redirect(resp_json['payment_url'])
-        else:
-            message = resp_json.get('error', 'Payment initiation failed. Please try again.')
+            conn = None
+            try:
+                conn = get_db_connection()
+                user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+                user_id = 0
+                if not user:
+                    password_hash = generate_password_hash(secrets.token_hex(8))
+                    cursor = conn.cursor()
+                    cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)',
+                                   (email, password_hash, name, phone))
+                    user_id = cursor.lastrowid
+                    conn.commit()
+                    log_info(app_logger, "New user created via payment", user_id=user_id, email=email)
+                else:
+                    user_id = user['id']
+                    log_info(app_logger, "Existing user accessed via payment", user_id=user_id, email=email)
+            except Exception as e:
+                log_error(app_logger, "Payment processing failed", error=str(e))
+                message = 'Payment processing failed. Please try again.'
+            finally:
+                if conn:
+                    return_db_connection(conn)
+            
+            payment_data = { 'user_id': user_id, 'course_type': plan_key_from_form, 'price': price, 'payment_method': 'card', 'email': email }
+            
+            with app.test_request_context():
+                with app.test_client() as client:
+                    resp = client.post(url_for('initiate_payment'), json=payment_data)
+                    resp_json = resp.get_json()
+            
+            if resp_json and resp_json.get('success'):
+                session['pending_reference'] = resp_json['payment_reference']
+                session['user_id'] = user_id
+                return redirect(resp_json['payment_url'])
+            else:
+                message = resp_json.get('error', 'Payment initiation failed. Please try again.')
     
     return render_template_string('''
     <html><head><title>Vibes University - Payment</title>
@@ -459,7 +464,15 @@ def pay():
 @app.route('/payment/callback')
 def payment_callback():
     reference = request.args.get('reference') or session.get('pending_reference')
-    if not reference: return "Missing payment reference.", 400
+    if not reference: 
+        log_warning(payment_logger, "Payment callback failed - missing reference")
+        return "Missing payment reference.", 400
+    
+    # Sanitize reference to prevent injection
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', reference):
+        log_warning(payment_logger, "Payment callback failed - invalid reference format")
+        return "Invalid payment reference format.", 400
 
     with app.test_request_context():
         with app.test_client() as client:
@@ -467,9 +480,12 @@ def payment_callback():
             resp_json = resp.get_json()
     if resp_json and resp_json.get('success'):
         session['enrollment'] = resp_json['enrollment']
+        log_info(payment_logger, "Payment callback successful", reference=reference)
         return redirect(url_for('dashboard'))
     else:
-        return f"Payment verification failed: {resp_json.get('error', 'Unknown error')}", 400
+        error_msg = resp_json.get('error', 'Unknown error')
+        log_warning(payment_logger, "Payment callback failed", reference=reference, error=error_msg)
+        return f"Payment verification failed: {error_msg}", 400
 
 @app.route('/dashboard')
 def dashboard():
@@ -477,30 +493,37 @@ def dashboard():
         return redirect(url_for('student_login'))
     enrollment = session['enrollment']
     user_id = enrollment['user_id']
-    conn = get_db_connection()
+    conn = None
+    try:
+        conn = get_db_connection()
 
-    announcements = conn.execute("SELECT * FROM announcements WHERE is_active = 1 AND (expires_at IS NULL OR expires_at > datetime('now')) AND (target_audience = 'all' OR target_audience = ?) ORDER BY priority DESC, created_at DESC", (enrollment['course_type'],)).fetchall()
+        announcements = conn.execute("SELECT * FROM announcements WHERE is_active = 1 AND (expires_at IS NULL OR expires_at > datetime('now')) AND (target_audience = 'all' OR target_audience = ?) ORDER BY priority DESC, created_at DESC", (enrollment['course_type'],)).fetchall()
 
-    target_course_name = enrollment['course_type']
-    course_info = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
+        target_course_name = enrollment['course_type']
+        course_info = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
 
-    detailed_lessons_for_template = []
-    total_lessons = 0
-    completed_ids = set()
-    progress_percent = 0
+        detailed_lessons_for_template = []
+        total_lessons = 0
+        completed_ids = set()
+        progress_percent = 0
 
-    if course_info:
-        target_course_id = course_info['id']
-        lessons_data_raw = conn.execute("SELECT l.id, m.name as module_name, l.lesson, COALESCE(l.order_index, 1) as order_index FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.course_id = ? ORDER BY m.order_index, l.order_index", (target_course_id,)).fetchall()
-        detailed_lessons_for_template = [dict(l) for l in lessons_data_raw]
-        total_lessons = len(detailed_lessons_for_template)
+        if course_info:
+            target_course_id = course_info['id']
+            lessons_data_raw = conn.execute("SELECT l.id, m.name as module_name, l.lesson, COALESCE(l.order_index, 1) as order_index FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.course_id = ? ORDER BY m.order_index, l.order_index", (target_course_id,)).fetchall()
+            detailed_lessons_for_template = [dict(l) for l in lessons_data_raw]
+            total_lessons = len(detailed_lessons_for_template)
 
-        if total_lessons > 0:
-            completed_data = conn.execute("SELECT lesson_id FROM course_progress WHERE user_id = ? AND course_id = ? AND completed = 1", (user_id, target_course_id)).fetchall()
-            completed_ids = set([str(row['lesson_id']) for row in completed_data])
-            completed_count = len(completed_ids)
-            progress_percent = int((completed_count / total_lessons) * 100) if total_lessons else 0
-    conn.close()
+            if total_lessons > 0:
+                completed_data = conn.execute("SELECT lesson_id FROM course_progress WHERE user_id = ? AND course_id = ? AND completed = 1", (user_id, target_course_id)).fetchall()
+                completed_ids = set([str(row['lesson_id']) for row in completed_data])
+                completed_count = len(completed_ids)
+                progress_percent = int((completed_count / total_lessons) * 100) if total_lessons else 0
+    except Exception as e:
+        log_error(app_logger, "Failed to retrieve dashboard data", error=str(e))
+        return "Error loading dashboard", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
     return render_template_string('''
     <html><head><title>Student Dashboard</title>
@@ -522,17 +545,24 @@ def dashboard():
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
+    csrf_token = generate_csrf_token()
     message = ''
     if request.method == 'POST':
-        password = request.form.get('password')
-        if password == ADMIN_PASSWORD:
-            session['admin_logged_in'] = True
-            return redirect(url_for('admin_dashboard'))
+        # Validate CSRF token
+        if not validate_csrf_token():
+            message = 'Invalid request.'
         else:
-            message = 'Invalid password.'
+            password = request.form.get('password')
+            if password == ADMIN_PASSWORD:
+                session['admin_logged_in'] = True
+                log_info(security_logger, "Admin login successful")
+                return redirect(url_for('admin_dashboard'))
+            else:
+                message = 'Invalid password.'
+                log_warning(security_logger, "Admin login failed - invalid password")
     return render_template_string('''
-    <html><head><title>Admin Login</title></head><body style="background:#111;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:60px;"><h2>Admin Login</h2><form method="post"><input type="password" name="password" placeholder="Admin Password" required style="padding:10px;border-radius:8px;"><button type="submit" style="padding:10px 20px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:bold;">Login</button></form>{% if message %}<div style="color:#f00;margin-top:20px;">{{message}}</div>{% endif %}</body></html>
-    ''', message=message)
+    <html><head><title>Admin Login</title></head><body style="background:#111;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:60px;"><h2>Admin Login</h2><form method="post"><input type="hidden" name="csrf_token" value="{{csrf_token}}"><input type="password" name="password" placeholder="Admin Password" required style="padding:10px;border-radius:8px;"><button type="submit" style="padding:10px 20px;border-radius:8px;background:#ff6b35;color:#fff;font-weight:bold;">Login</button></form>{% if message %}<div style="color:#f00;margin-top:20px;">{{message}}</div>{% endif %}</body></html>
+    ''', message=message, csrf_token=csrf_token)
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -545,16 +575,23 @@ def admin_dashboard():
         return redirect(url_for('admin_login'))
     
     message = request.args.get('message', '')
-    conn = get_db_connection()
-    total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-    total_enrollments = conn.execute('SELECT COUNT(*) as count FROM enrollments').fetchone()['count']
-    completed_payments = conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE payment_status = 'completed'").fetchone()['count']
-    total_revenue = conn.execute("SELECT SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()['total'] or 0
-    total_lessons_stat = conn.execute('SELECT COUNT(*) as count FROM lessons').fetchone()['count']
-    
-    recent_enrollments = conn.execute("SELECT e.*, u.full_name, u.email FROM enrollments e JOIN users u ON e.user_id = u.id ORDER BY e.enrolled_at DESC LIMIT 10").fetchall()
-    course_stats = conn.execute("SELECT course_type, COUNT(*) as count, SUM(price) as revenue FROM enrollments WHERE payment_status = 'completed' GROUP BY course_type").fetchall()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
+        total_enrollments = conn.execute('SELECT COUNT(*) as count FROM enrollments').fetchone()['count']
+        completed_payments = conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE payment_status = 'completed'").fetchone()['count']
+        total_revenue = conn.execute("SELECT SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()['total'] or 0
+        total_lessons_stat = conn.execute('SELECT COUNT(*) as count FROM lessons').fetchone()['count']
+        
+        recent_enrollments = conn.execute("SELECT e.*, u.full_name, u.email FROM enrollments e JOIN users u ON e.user_id = u.id ORDER BY e.enrolled_at DESC LIMIT 10").fetchall()
+        course_stats = conn.execute("SELECT course_type, COUNT(*) as count, SUM(price) as revenue FROM enrollments WHERE payment_status = 'completed' GROUP BY course_type").fetchall()
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin dashboard data", error=str(e))
+        return "Error loading dashboard", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     
     return render_template_string('''
     <html><head><title>Admin Dashboard - Vibes University</title>
@@ -576,43 +613,49 @@ def student_courses():
     if not enrollment:
         return redirect(url_for('pay'))
     
-    conn = get_db_connection()
-    target_course_name = enrollment['course_type']
-    course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
+    conn = None
+    try:
+        conn = get_db_connection()
+        target_course_name = enrollment['course_type']
+        course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (target_course_name,)).fetchone()
 
-    lessons = []
-    modules = {}
+        lessons = []
+        modules = {}
 
-    if course_details:
-        target_course_id = course_details['id']
-        lessons_data = conn.execute('''
-            SELECT l.id, l.course_id, l.module_id, m.name as module_name, l.lesson, l.description, l.file_path, l.content_type, l.element_properties,
-                   COALESCE(l.order_index, 1) as order_index
-            FROM lessons l JOIN modules m ON l.module_id = m.id
-            WHERE l.course_id = ?
-            ORDER BY m.order_index, l.order_index, l.lesson
-        ''', (target_course_id,)).fetchall()
+        if course_details:
+            target_course_id = course_details['id']
+            lessons_data = conn.execute('''
+                SELECT l.id, l.course_id, l.module_id, m.name as module_name, l.lesson, l.description, l.file_path, l.content_type, l.element_properties,
+                       COALESCE(l.order_index, 1) as order_index
+                FROM lessons l JOIN modules m ON l.module_id = m.id
+                WHERE l.course_id = ?
+                ORDER BY m.order_index, l.order_index, l.lesson
+            ''', (target_course_id,)).fetchall()
 
-        for lesson_row in lessons_data:
-            lesson_dict = dict(lesson_row)
-            try:
-                lesson_dict['element_properties'] = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
-            except (json.JSONDecodeError, TypeError):
-                lesson_dict['element_properties'] = {}
-            lessons.append(lesson_dict)
+            for lesson_row in lessons_data:
+                lesson_dict = dict(lesson_row)
+                try:
+                    lesson_dict['element_properties'] = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
+                except (json.JSONDecodeError, TypeError):
+                    lesson_dict['element_properties'] = {}
+                lessons.append(lesson_dict)
 
-            module_name_from_join = lesson_dict['module_name']
-            if module_name_from_join not in modules:
-                modules[module_name_from_join] = []
-            modules[module_name_from_join].append(lesson_dict)
-    
-    progress_data = conn.execute("SELECT course_id, lesson_id, completed FROM course_progress WHERE user_id = ?", (enrollment['user_id'],)).fetchall()
-    progress_lookup = {}
-    for p_row in progress_data:
-        key = f"{p_row['course_id']}_{p_row['lesson_id']}"
-        progress_lookup[key] = p_row['completed']
-    
-    conn.close()
+                module_name_from_join = lesson_dict['module_name']
+                if module_name_from_join not in modules:
+                    modules[module_name_from_join] = []
+                modules[module_name_from_join].append(lesson_dict)
+        
+        progress_data = conn.execute("SELECT course_id, lesson_id, completed FROM course_progress WHERE user_id = ?", (enrollment['user_id'],)).fetchall()
+        progress_lookup = {}
+        for p_row in progress_data:
+            key = f"{p_row['course_id']}_{p_row['lesson_id']}"
+            progress_lookup[key] = p_row['completed']
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve student courses data", error=str(e))
+        return "Error loading courses", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     
     completed_count_for_this_course = 0
     if course_details:
@@ -649,33 +692,37 @@ def view_lesson(lesson_id):
     enrollment = session.get('enrollment')
     if not enrollment: return redirect(url_for('pay'))
     
-    conn = get_db_connection()
-    lesson_data_row = conn.execute("SELECT l.*, m.name as module_name, c.name as course_name FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON l.course_id = c.id WHERE l.id = ?", (lesson_id,)).fetchone()
-    
-    if not lesson_data_row:
-        conn.close()
-        return "Lesson not found", 404
-    
-    lesson = dict(lesson_data_row)
+    conn = None
     try:
-        lesson['element_properties'] = json.loads(lesson_data_row['element_properties']) if lesson_data_row['element_properties'] else {}
-    except (json.JSONDecodeError, TypeError):
-        lesson['element_properties'] = {}
+        conn = get_db_connection()
+        lesson_data_row = conn.execute("SELECT l.*, m.name as module_name, c.name as course_name FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON l.course_id = c.id WHERE l.id = ?", (lesson_id,)).fetchone()
+        
+        if not lesson_data_row:
+            return "Lesson not found", 404
+        
+        lesson = dict(lesson_data_row)
+        try:
+            lesson['element_properties'] = json.loads(lesson_data_row['element_properties']) if lesson_data_row['element_properties'] else {}
+        except (json.JSONDecodeError, TypeError):
+            lesson['element_properties'] = {}
 
-    enrolled_course_name_from_session = enrollment['course_type']
-    enrolled_course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (enrolled_course_name_from_session,)).fetchone()
+        enrolled_course_name_from_session = enrollment['course_type']
+        enrolled_course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (enrolled_course_name_from_session,)).fetchone()
 
-    if not enrolled_course_details or lesson['course_id'] != enrolled_course_details['id']:
-        conn.close()
-        return "Access denied to this lesson.", 403
+        if not enrolled_course_details or lesson['course_id'] != enrolled_course_details['id']:
+            return "Access denied to this lesson.", 403
 
-    all_lessons_raw = conn.execute("SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons WHERE course_id = ? ORDER BY module_id, order_index, lesson", (lesson['course_id'],)).fetchall()
-    all_lessons = [dict(l) for l in all_lessons_raw]
-    current_index = next((i for i, l_item in enumerate(all_lessons) if l_item['id'] == lesson_id), None)
-    next_l = all_lessons[current_index + 1] if current_index is not None and current_index + 1 < len(all_lessons) else None
-    prev_l = all_lessons[current_index - 1] if current_index is not None and current_index > 0 else None
-    
-    conn.close()
+        all_lessons_raw = conn.execute("SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons WHERE course_id = ? ORDER BY module_id, order_index, lesson", (lesson['course_id'],)).fetchall()
+        all_lessons = [dict(l) for l in all_lessons_raw]
+        current_index = next((i for i, l_item in enumerate(all_lessons) if l_item['id'] == lesson_id), None)
+        next_l = all_lessons[current_index + 1] if current_index is not None and current_index + 1 < len(all_lessons) else None
+        prev_l = all_lessons[current_index - 1] if current_index is not None and current_index > 0 else None
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve lesson data", error=str(e))
+        return "Error loading lesson", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     
     content_type = lesson.get('content_type', 'file')
     element_props = lesson.get('element_properties', {})
@@ -805,16 +852,23 @@ def mark_lesson_completed():
     if not all([user_id, course_id, lesson_id]): return jsonify({'error': 'Missing required fields'}), 400
     if user_id != enrollment['user_id']: return jsonify({'error': 'Unauthorized user ID mismatch'}), 403
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    existing = conn.execute("SELECT id FROM course_progress WHERE user_id = ? AND course_id = ? AND lesson_id = ?", (user_id, course_id, lesson_id)).fetchone()
-    if existing:
-        cursor.execute("UPDATE course_progress SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE id = ?", (existing['id'],))
-    else:
-        cursor.execute("INSERT INTO course_progress (user_id, course_id, lesson_id, completed, completed_at) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)", (user_id, course_id, lesson_id))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'message': 'Lesson marked as completed'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        existing = conn.execute("SELECT id FROM course_progress WHERE user_id = ? AND course_id = ? AND lesson_id = ?", (user_id, course_id, lesson_id)).fetchone()
+        if existing:
+            cursor.execute("UPDATE course_progress SET completed = 1, completed_at = CURRENT_TIMESTAMP WHERE id = ?", (existing['id'],))
+        else:
+            cursor.execute("INSERT INTO course_progress (user_id, course_id, lesson_id, completed, completed_at) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)", (user_id, course_id, lesson_id))
+        conn.commit()
+        return jsonify({'success': True, 'message': 'Lesson marked as completed'})
+    except Exception as e:
+        log_error(db_logger, "Failed to mark lesson as completed", error=str(e))
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/logout')
 def logout():
@@ -825,27 +879,36 @@ def logout():
 def demo_payment():
     if request.method == 'POST':
         name, email, phone, plan_key = request.form.get('name'), request.form.get('email'), request.form.get('phone'), request.form.get('plan', 'course')
-        conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-        user_id = 0
-        if not user:
-            password_hash = generate_password_hash(secrets.token_hex(8))
+        conn = None
+        try:
+            conn = get_db_connection()
+            user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+            user_id = 0
+            if not user:
+                password_hash = generate_password_hash(secrets.token_hex(8))
+                cursor = conn.cursor()
+                cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)', (email, password_hash, name, phone))
+                user_id = cursor.lastrowid
+                conn.commit()
+            else: user_id = user['id']
+            
+            plans = { 'course': {'name': 'Course Access', 'price': 100000}, 'online': {'name': 'Online Mentorship', 'price': 400000}, 'vip': {'name': 'VIP Physical Class', 'price': 2000000} }
+            plan_details = plans.get(plan_key, plans['course'])
+            
             cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (email, password_hash, full_name, phone) VALUES (?, ?, ?, ?)', (email, password_hash, name, phone))
-            user_id = cursor.lastrowid
+            cursor.execute("INSERT INTO enrollments (user_id, course_type, price, payment_method, payment_status, payment_reference) VALUES (?, ?, ?, ?, ?, ?)",
+                           (user_id, plan_key, plan_details['price'], 'demo', 'completed', f'DEMO_{user_id}_{int(datetime.now().timestamp())}'))
+            enrollment_id = cursor.lastrowid
             conn.commit()
-        else: user_id = user['id']
-        
-        plans = { 'course': {'name': 'Course Access', 'price': 100000}, 'online': {'name': 'Online Mentorship', 'price': 400000}, 'vip': {'name': 'VIP Physical Class', 'price': 2000000} }
-        plan_details = plans.get(plan_key, plans['course'])
-        
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO enrollments (user_id, course_type, price, payment_method, payment_status, payment_reference) VALUES (?, ?, ?, ?, ?, ?)",
-                       (user_id, plan_key, plan_details['price'], 'demo', 'completed', f'DEMO_{user_id}_{int(datetime.now().timestamp())}'))
-        enrollment_id = cursor.lastrowid
-        conn.commit()
-        enrollment_for_session = conn.execute("SELECT e.*, u.email, u.full_name FROM enrollments e JOIN users u ON e.user_id = u.id WHERE e.id = ?", (enrollment_id,)).fetchone()
-        conn.close()
+            enrollment_for_session = conn.execute("SELECT e.*, u.email, u.full_name FROM enrollments e JOIN users u ON e.user_id = u.id WHERE e.id = ?", (enrollment_id,)).fetchone()
+            session['enrollment'] = dict(enrollment_for_session)
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            log_error(payment_logger, "Demo payment failed", error=str(e))
+            return "Error processing demo payment", 500
+        finally:
+            if conn:
+                return_db_connection(conn)
         session['enrollment'] = dict(enrollment_for_session)
         return redirect(url_for('dashboard'))
     
@@ -860,9 +923,16 @@ def demo_payment():
 @app.route('/admin/users')
 def admin_users():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
-    conn = get_db_connection()
-    users = conn.execute("SELECT u.*, COUNT(e.id) as enrollment_count, SUM(CASE WHEN e.payment_status = 'completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN e.payment_status = 'completed' THEN e.price ELSE 0 END) as total_spent FROM users u LEFT JOIN enrollments e ON u.id = e.user_id GROUP BY u.id ORDER BY u.created_at DESC").fetchall()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        users = conn.execute("SELECT u.*, COUNT(e.id) as enrollment_count, SUM(CASE WHEN e.payment_status = 'completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN e.payment_status = 'completed' THEN e.price ELSE 0 END) as total_spent FROM users u LEFT JOIN enrollments e ON u.id = e.user_id GROUP BY u.id ORDER BY u.created_at DESC").fetchall()
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin users data", error=str(e))
+        return "Error loading users", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     return render_template_string('''
     <html><head><title>User Management</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px;}.header{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#ff6b35;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.table{width:100%;border-collapse:collapse;background:#222;border-radius:10px;overflow:hidden;}.table th,.table td{padding:15px;text-align:left;border-bottom:1px solid #444;}.table th{background:#333;color:#ff6b35;font-weight:bold;}.table tr:hover{background:#333;}.status-active{color:#4CAF50;}.status-inactive{color:#f44336;}.user-email{color:#ff6b35;}</style></head>
     <body><div class="header"><h1>👥 User Management</h1><a href="{{url_for('admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
@@ -874,11 +944,18 @@ def admin_users():
 @app.route('/admin/analytics')
 def admin_analytics():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
-    conn = get_db_connection()
-    monthly_revenue = conn.execute("SELECT strftime('%Y-%m',enrolled_at) as month, SUM(price) as revenue, COUNT(*) as enrollments FROM enrollments WHERE payment_status='completed' GROUP BY 1 ORDER BY 1 DESC LIMIT 12").fetchall()
-    course_performance = conn.execute("SELECT course_type, COUNT(*) as total_enrollments, SUM(CASE WHEN payment_status='completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN payment_status='completed' THEN price ELSE 0 END) as revenue, AVG(CASE WHEN payment_status='completed' THEN price ELSE NULL END) as avg_revenue FROM enrollments GROUP BY 1").fetchall()
-    lesson_stats = conn.execute("SELECT c.name as course_name, m.name as module_name, l.lesson, COUNT(cp.id) as completions FROM lessons l JOIN modules m ON l.module_id=m.id JOIN courses c ON l.course_id=c.id LEFT JOIN course_progress cp ON l.id=cp.lesson_id AND cp.completed=1 GROUP BY l.id,c.name,m.name,l.lesson ORDER BY completions DESC LIMIT 10").fetchall()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        monthly_revenue = conn.execute("SELECT strftime('%Y-%m',enrolled_at) as month, SUM(price) as revenue, COUNT(*) as enrollments FROM enrollments WHERE payment_status='completed' GROUP BY 1 ORDER BY 1 DESC LIMIT 12").fetchall()
+        course_performance = conn.execute("SELECT course_type, COUNT(*) as total_enrollments, SUM(CASE WHEN payment_status='completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN payment_status='completed' THEN price ELSE 0 END) as revenue, AVG(CASE WHEN payment_status='completed' THEN price ELSE NULL END) as avg_revenue FROM enrollments GROUP BY 1").fetchall()
+        lesson_stats = conn.execute("SELECT c.name as course_name, m.name as module_name, l.lesson, COUNT(cp.id) as completions FROM lessons l JOIN modules m ON l.module_id=m.id JOIN courses c ON l.course_id=c.id LEFT JOIN course_progress cp ON l.id=cp.lesson_id AND cp.completed=1 GROUP BY l.id,c.name,m.name,l.lesson ORDER BY completions DESC LIMIT 10").fetchall()
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin analytics data", error=str(e))
+        return "Error loading analytics", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     return render_template_string('''
     <html><head><title>Analytics</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px;}.header{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#ff6b35;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;}h3{color:#ff6b35;margin-top:0;}.table{width:100%;border-collapse:collapse;margin-top:15px;}.table th,.table td{padding:12px;text-align:left;border-bottom:1px solid #444;}.table th{background:#333;color:#ff6b35;}.table tr:hover{background:#333;}</style></head>
     <body><div class="header"><h1>📊 Analytics Dashboard</h1><a href="{{url_for('admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
@@ -916,33 +993,40 @@ def admin_announcements():
         return redirect(url_for('admin_login'))
     
     message = ''
-    conn = get_db_connection() # Open connection early
+    conn = None
+    try:
+        conn = get_db_connection()
 
-    if request.method == 'POST':
-        title = request.form.get('title')
-        msg_content = request.form.get('message_content')
-        priority = request.form.get('priority', 'normal')
-        target_audience = request.form.get('target_audience', 'all')
-        expires_at_str = request.form.get('expires_at')
-        is_active = request.form.get('is_active', '1') # Assuming '1' for active
+        if request.method == 'POST':
+            title = request.form.get('title')
+            msg_content = request.form.get('message_content')
+            priority = request.form.get('priority', 'normal')
+            target_audience = request.form.get('target_audience', 'all')
+            expires_at_str = request.form.get('expires_at')
+            is_active = request.form.get('is_active', '1') # Assuming '1' for active
 
-        if title and msg_content:
-            try:
-                cursor = conn.cursor()
-                # For now, only insert, no edit logic in this placeholder
-                cursor.execute("""
-                    INSERT INTO announcements (title, message, priority, target_audience, is_active, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (title, msg_content, priority, target_audience, 1 if is_active == '1' else 0, expires_at_str if expires_at_str else None))
-                conn.commit()
-                message = f"Announcement '{title}' created successfully."
-            except Exception as e:
-                message = f"Error creating announcement: {str(e)}"
-        else:
-            message = "Title and Message are required for an announcement."
+            if title and msg_content:
+                try:
+                    cursor = conn.cursor()
+                    # For now, only insert, no edit logic in this placeholder
+                    cursor.execute("""
+                        INSERT INTO announcements (title, message, priority, target_audience, is_active, expires_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (title, msg_content, priority, target_audience, 1 if is_active == '1' else 0, expires_at_str if expires_at_str else None))
+                    conn.commit()
+                    message = f"Announcement '{title}' created successfully."
+                except Exception as e:
+                    message = f"Error creating announcement: {str(e)}"
+            else:
+                message = "Title and Message are required for an announcement."
 
-    announcements_data = conn.execute("SELECT * FROM announcements ORDER BY created_at DESC").fetchall()
-    conn.close() # Close connection after all DB operations for this request
+        announcements_data = conn.execute("SELECT * FROM announcements ORDER BY created_at DESC").fetchall()
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin announcements data", error=str(e))
+        return "Error loading announcements", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
     return render_template_string('''
     <html><head><title>Admin - Announcements</title>
@@ -971,22 +1055,29 @@ def admin_announcements():
 @app.route('/admin/preview/<course_type>')
 def admin_preview_course(course_type):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
-    conn = get_db_connection()
-    target_course = conn.execute("SELECT * FROM courses WHERE name = ?", (course_type,)).fetchone()
-    
-    modules_list = []
-    lessons_list = []
-    course_name_for_template = course_type
-    
-    if target_course:
-        course_id = target_course['id']
-        course_name_for_template = target_course['name']
-        modules_list_raw = conn.execute("SELECT * FROM modules WHERE course_id = ? ORDER BY order_index", (course_id,)).fetchall()
-        modules_list = [dict(m) for m in modules_list_raw]
+    conn = None
+    try:
+        conn = get_db_connection()
+        target_course = conn.execute("SELECT * FROM courses WHERE name = ?", (course_type,)).fetchone()
+        
+        modules_list = []
+        lessons_list = []
+        course_name_for_template = course_type
+        
+        if target_course:
+            course_id = target_course['id']
+            course_name_for_template = target_course['name']
+            modules_list_raw = conn.execute("SELECT * FROM modules WHERE course_id = ? ORDER BY order_index", (course_id,)).fetchall()
+            modules_list = [dict(m) for m in modules_list_raw]
 
-        lessons_list_raw = conn.execute("SELECT l.*, m.name as module_name FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.course_id = ? ORDER BY m.order_index, l.order_index", (course_id,)).fetchall()
-        lessons_list = [dict(l) for l in lessons_list_raw]
-    conn.close()
+            lessons_list_raw = conn.execute("SELECT l.*, m.name as module_name FROM lessons l JOIN modules m ON l.module_id = m.id WHERE l.course_id = ? ORDER BY m.order_index, l.order_index", (course_id,)).fetchall()
+            lessons_list = [dict(l) for l in lessons_list_raw]
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin preview course data", error=str(e))
+        return "Error loading course preview", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
     
     return render_template_string('''
     <html><head><title>Course Preview - {{course_name|title}}</title>
@@ -1006,20 +1097,27 @@ def admin_preview_course(course_type):
 @app.route('/admin/preview/lesson/<int:lesson_id>')
 def admin_preview_lesson(lesson_id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
-    conn = get_db_connection()
-    lesson_data = conn.execute("SELECT l.*, m.name as module_name, c.name as course_name FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON l.course_id = c.id WHERE l.id = ?", (lesson_id,)).fetchone()
-    if not lesson_data: conn.close(); return "Lesson not found", 404
+    conn = None
+    try:
+        conn = get_db_connection()
+        lesson_data = conn.execute("SELECT l.*, m.name as module_name, c.name as course_name FROM lessons l JOIN modules m ON l.module_id = m.id JOIN courses c ON l.course_id = c.id WHERE l.id = ?", (lesson_id,)).fetchone()
+        if not lesson_data: return "Lesson not found", 404
 
-    lesson = dict(lesson_data)
-    try: lesson['element_properties'] = json.loads(lesson_data['element_properties']) if lesson_data['element_properties'] else {}
-    except: lesson['element_properties'] = {}
+        lesson = dict(lesson_data)
+        try: lesson['element_properties'] = json.loads(lesson_data['element_properties']) if lesson_data['element_properties'] else {}
+        except: lesson['element_properties'] = {}
 
-    all_lessons_raw = conn.execute("SELECT id,lesson,module_id FROM lessons WHERE course_id=? ORDER BY module_id,order_index,lesson", (lesson['course_id'],)).fetchall()
-    all_lessons = [dict(l) for l in all_lessons_raw]
-    current_index = next((i for i, l_item in enumerate(all_lessons) if l_item['id'] == lesson_id), None)
-    next_l = all_lessons[current_index + 1] if current_index is not None and current_index + 1 < len(all_lessons) else None
-    prev_l = all_lessons[current_index - 1] if current_index is not None and current_index > 0 else None
-    conn.close()
+        all_lessons_raw = conn.execute("SELECT id,lesson,module_id FROM lessons WHERE course_id=? ORDER BY module_id,order_index,lesson", (lesson['course_id'],)).fetchall()
+        all_lessons = [dict(l) for l in all_lessons_raw]
+        current_index = next((i for i, l_item in enumerate(all_lessons) if l_item['id'] == lesson_id), None)
+        next_l = all_lessons[current_index + 1] if current_index is not None and current_index + 1 < len(all_lessons) else None
+        prev_l = all_lessons[current_index - 1] if current_index is not None and current_index > 0 else None
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve admin preview lesson data", error=str(e))
+        return "Error loading lesson preview", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
     content_type, props = lesson.get('content_type','file'), lesson.get('element_properties',{})
     lesson_render_content = "<p>No content.</p>"
@@ -1064,16 +1162,18 @@ def api_admin_create_module(course_id):
     try:
         conn = get_db_connection()
         if not conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone():
-            conn.close(); return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found'}), 404
         cursor = conn.cursor()
         cursor.execute('INSERT INTO modules (course_id,name,description,order_index) VALUES (?,?,?,?)', (course_id,name,description,order_index))
         module_id = cursor.lastrowid
         conn.commit()
+        return jsonify({'message': 'Module created', 'module_id': module_id}), 201
     except Exception as e:
-        if conn: conn.close(); return jsonify({'error': f'DB error: {str(e)}'}), 500
+        log_error(db_logger, "Failed to create module", error=str(e))
+        return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
-        if conn: conn.close()
-    return jsonify({'message': 'Module created', 'module_id': module_id}), 201
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/admin/courses/<int:course_id>/modules', methods=['GET'])
 def api_admin_get_modules(course_id):
@@ -1082,13 +1182,15 @@ def api_admin_get_modules(course_id):
     try:
         conn = get_db_connection()
         if not conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone():
-            conn.close(); return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found'}), 404
         modules_data = conn.execute("SELECT id,name,description,order_index FROM modules WHERE course_id=? ORDER BY order_index", (course_id,)).fetchall()
+        return jsonify([dict(row) for row in modules_data])
     except Exception as e:
-        if conn: conn.close(); return jsonify({'error': f'DB error: {str(e)}'}), 500
+        log_error(db_logger, "Failed to retrieve modules", error=str(e))
+        return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
-        if conn: conn.close()
-    return jsonify([dict(row) for row in modules_data])
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/admin/modules/<int:module_id>', methods=['PUT'])
 def api_admin_update_module(module_id):
@@ -1110,11 +1212,13 @@ def api_admin_update_module(module_id):
         cursor.execute(f"UPDATE modules SET {','.join(fields)} WHERE id=?", tuple(params_list))
         updated_rows = cursor.rowcount
         conn.commit()
+        return jsonify({'message':'Module updated'}) if updated_rows > 0 else jsonify({'error':'Module not found or no change'}),404
     except Exception as e:
-        if conn: conn.close(); return jsonify({'error': f'DB error: {str(e)}'}), 500
+        log_error(db_logger, "Failed to update module", error=str(e))
+        return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
-        if conn: conn.close()
-    return jsonify({'message':'Module updated'}) if updated_rows > 0 else jsonify({'error':'Module not found or no change'}),404
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/admin/modules/<int:module_id>', methods=['DELETE'])
 def api_admin_delete_module(module_id):
@@ -1123,16 +1227,18 @@ def api_admin_delete_module(module_id):
     try:
         conn = get_db_connection()
         if conn.execute("SELECT COUNT(id) FROM lessons WHERE module_id=?",(module_id,)).fetchone()['count'] > 0:
-            conn.close(); return jsonify({'error': 'Module has lessons. Delete them first.'}), 400
+            return jsonify({'error': 'Module has lessons. Delete them first.'}), 400
         cursor = conn.cursor()
         cursor.execute("DELETE FROM modules WHERE id=?", (module_id,))
         deleted_rows = cursor.rowcount
         conn.commit()
+        return jsonify({'message':'Module deleted'}) if deleted_rows > 0 else jsonify({'error':'Module not found'}),404
     except Exception as e:
-        if conn: conn.close(); return jsonify({'error': f'DB error: {str(e)}'}), 500
+        log_error(db_logger, "Failed to delete module", error=str(e))
+        return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
-        if conn: conn.close()
-    return jsonify({'message':'Module deleted'}) if deleted_rows > 0 else jsonify({'error':'Module not found'}),404
+        if conn:
+            return_db_connection(conn)
 # --- End of Module Management APIs ---
 
 @app.route('/api/admin/courses/<int:course_id>/lessons', methods=['POST'])
@@ -1146,7 +1252,6 @@ def api_admin_create_lesson_in_course(course_id):
         # Verify course exists
         course = conn.execute('SELECT id, name FROM courses WHERE id = ?', (course_id,)).fetchone()
         if not course:
-            if conn: conn.close()
             return jsonify({'error': 'Course not found'}), 404
 
         form_data = request.form # For multipart/form-data
@@ -1172,7 +1277,6 @@ def api_admin_create_lesson_in_course(course_id):
         # Verify module belongs to the course
         module = conn.execute('SELECT id, name FROM modules WHERE id = ? AND course_id = ?', (module_id, course_id)).fetchone()
         if not module:
-            if conn: conn.close()
             return jsonify({'error': 'Module not found or does not belong to this course'}), 400
 
         file_path_to_save = None
@@ -1193,7 +1297,6 @@ def api_admin_create_lesson_in_course(course_id):
                 file_path_to_save = os.path.join(lesson_upload_dir, unique_filename)
                 file.save(file_path_to_save)
             elif file and file.filename and not allowed_file(file.filename):
-                 if conn: conn.close()
                  return jsonify({'error': f'Uploaded file type not allowed for {file.filename}'}), 400
 
         cursor = conn.cursor()
@@ -1204,7 +1307,6 @@ def api_admin_create_lesson_in_course(course_id):
         new_lesson_id = cursor.lastrowid
         conn.commit()
 
-        if conn: conn.close()
         return jsonify({
             'message': 'Lesson element created successfully',
             'lesson': {
@@ -1219,10 +1321,12 @@ def api_admin_create_lesson_in_course(course_id):
         }), 201
 
     except Exception as e:
-        if conn: conn.close()
         # It's good practice to log the actual exception
-        app.logger.error(f"Error creating lesson for course {course_id}: {str(e)}")
+        log_error(app_logger, f"Error creating lesson for course {course_id}", error=str(e), course_id=course_id)
         return jsonify({'error': f'An internal server error occurred.'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/student/submit-quiz/<int:lesson_id>', methods=['POST'])
 def api_student_submit_quiz(lesson_id):
@@ -1240,18 +1344,15 @@ def api_student_submit_quiz(lesson_id):
         conn = get_db_connection()
         lesson = conn.execute('SELECT id, course_id, element_properties FROM lessons WHERE id = ? AND content_type = ?', (lesson_id, 'quiz')).fetchone()
         if not lesson:
-            if conn: conn.close()
             return jsonify({'error': 'Quiz lesson not found'}), 404
 
         # Authorization: Check if the student's enrollment matches the lesson's course
         enrolled_course_name = enrollment.get('course_type')
         if not enrolled_course_name:
-            if conn: conn.close()
             return jsonify({'error': 'Enrollment course type not found in session'}), 403
 
         course_of_lesson = conn.execute('SELECT name FROM courses WHERE id = ?', (lesson['course_id'],)).fetchone()
         if not course_of_lesson or course_of_lesson['name'] != enrolled_course_name:
-            if conn: conn.close()
             return jsonify({'error': 'Not authorized to submit quiz for this course'}), 403
 
         user_id = enrollment['user_id']
@@ -1270,12 +1371,13 @@ def api_student_submit_quiz(lesson_id):
         ''', (user_id, lesson_id, lesson['course_id'], json.dumps({'answer_index': submitted_answer_index}), is_correct, score))
         conn.commit()
 
-        if conn: conn.close()
         return jsonify({'success': True, 'is_correct': is_correct, 'score': score, 'message': 'Quiz submitted successfully'})
 
     except Exception as e:
-        if conn: conn.close()
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/admin/lessons/<int:lesson_id>', methods=['PUT'])
 def api_admin_update_lesson(lesson_id):
@@ -1289,7 +1391,6 @@ def api_admin_update_lesson(lesson_id):
         conn = get_db_connection()
         existing_lesson = conn.execute('SELECT * FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
         if not existing_lesson:
-            if conn: conn.close()
             return jsonify({'error': 'Lesson not found'}), 404
 
         fields_to_update = []
@@ -1301,12 +1402,10 @@ def api_admin_update_lesson(lesson_id):
         if content_type_from_request == 'application/json':
             form_data_dict = request.get_json()
             if not form_data_dict:
-                if conn: conn.close()
                 return jsonify({'error': 'Invalid JSON data'}), 400
         elif content_type_from_request == 'multipart/form-data':
             form_data_dict = request.form.to_dict() # Convert ImmutableMultiDict to mutable dict
         else:
-            if conn: conn.close()
             return jsonify({'error': f'Unsupported Content-Type: {request.content_type}'}), 415
 
         # Populate fields_to_update and params based on 'form_data_dict'
@@ -1323,7 +1422,6 @@ def api_admin_update_lesson(lesson_id):
                 fields_to_update.append("module_id = ?")
                 params.append(module_id)
             except ValueError as ve:
-                if conn: conn.close()
                 return jsonify({'error': f'Invalid module_id: {str(ve)}'}), 400
 
         if 'element_properties' in form_data_dict:
@@ -1334,7 +1432,6 @@ def api_admin_update_lesson(lesson_id):
                     fields_to_update.append("element_properties = ?")
                     params.append(props_data)
                 except json.JSONDecodeError:
-                    if conn: conn.close()
                     return jsonify({'error': 'Invalid JSON for element_properties'}), 400
             elif isinstance(props_data, dict):
                 fields_to_update.append("element_properties = ?")
@@ -1363,13 +1460,11 @@ def api_admin_update_lesson(lesson_id):
                         module_info = conn.execute("SELECT name FROM modules WHERE id = ? AND course_id = ?",
                                                     (module_id_for_path, current_course_id)).fetchone()
                         if not module_info:
-                                if conn: conn.close()
                                 return jsonify({'error': f'Error determining module for file path: Module ID {module_id_for_path} not found for course.'}), 400
                         current_module_name_for_path = secure_filename(module_info['name'])
 
                         course_name_for_path_row = conn.execute('SELECT name FROM courses WHERE id = ?', (current_course_id,)).fetchone()
                         if not course_name_for_path_row:
-                            if conn: conn.close()
                             return jsonify({'error': 'Associated course not found for file path construction.'}), 500
                         course_name_for_path = secure_filename(course_name_for_path_row['name'])
 
@@ -1393,7 +1488,6 @@ def api_admin_update_lesson(lesson_id):
 
 
                     else:
-                        if conn: conn.close()
                         return jsonify({'error': f'New file type not allowed for {file.filename}'}), 400
 
             if form_data_dict.get('clear_file') == 'true' and not new_file_uploaded_path:
@@ -1412,7 +1506,6 @@ def api_admin_update_lesson(lesson_id):
              # Check if the only operation was clearing a file that actually existed
             was_file_cleared_operation = form_data_dict.get('clear_file') == 'true' and existing_lesson['file_path'] and not new_file_uploaded_path
             if not was_file_cleared_operation : # If no other fields and no actual file clearing happened
-                if conn: conn.close()
                 return jsonify({'message': 'No fields or file operations to update'}), 200
 
         params.append(lesson_id)
@@ -1420,11 +1513,12 @@ def api_admin_update_lesson(lesson_id):
         query = f"UPDATE lessons SET {', '.join(fields_to_update)} WHERE id = ?"
         cursor.execute(query, tuple(params))
         conn.commit()
-        if conn: conn.close()
         return jsonify({'message': 'Lesson element updated successfully'})
     except Exception as e:
-        if conn: conn.close()
         return jsonify({'error': f'Database operation failed: {str(e)}'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @app.route('/api/admin/lessons/<int:lesson_id>', methods=['DELETE'])
 def api_admin_delete_lesson(lesson_id):
@@ -1437,7 +1531,6 @@ def api_admin_delete_lesson(lesson_id):
         lesson = conn.execute('SELECT file_path FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
 
         if not lesson:
-            if conn: conn.close()
             return jsonify({'error': 'Lesson not found'}), 404
 
         if lesson['file_path'] and os.path.exists(lesson['file_path']):
@@ -1446,11 +1539,12 @@ def api_admin_delete_lesson(lesson_id):
         cursor = conn.cursor()
         cursor.execute("DELETE FROM lessons WHERE id = ?", (lesson_id,))
         conn.commit()
+        return jsonify({'message': 'Lesson element deleted successfully'})
     except Exception as e:
-        if conn: conn.close()
         return jsonify({'error': f'Database operation failed or file deletion failed: {str(e)}'}), 500
     finally:
-        if conn: conn.close()
+        if conn:
+            return_db_connection(conn)
 
     return jsonify({'message': 'Lesson element deleted successfully'})
 

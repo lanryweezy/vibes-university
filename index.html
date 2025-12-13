@@ -594,6 +594,7 @@
                 <a href="#testimonials">Success Stories</a>
                 <a href="#contact">Contact</a>
                 <a href="/student/login" style="color: #ff6b35; font-weight: bold;">Student Login</a>
+                <a href="/teacher/login" style="color: #4CAF50; font-weight: bold;">Teacher Login</a>
             </div>
         </nav>
     </header>
@@ -949,7 +950,11 @@
 
         // Add urgency popup after 30 seconds
         setTimeout(() => {
-            if (confirm('⚠️ FINAL WARNING: You\'ve been on this page for 30 seconds.\n\nEvery second you delay, your financial future gets worse.\n\nClick OK to secure your spot NOW, or Cancel to remain trapped in poverty.')) {
+            if (confirm('⚠️ FINAL WARNING: You\'ve been on this page for 30 seconds.
+
+Every second you delay, your financial future gets worse.
+
+Click OK to secure your spot NOW, or Cancel to remain trapped in poverty.')) {
                 document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
             }
         }, 30000);
@@ -959,7 +964,12 @@
         document.addEventListener('mouseleave', function(e) {
             if (e.clientY <= 0 && !exitIntentShown) {
                 exitIntentShown = true;
-                if (confirm('🚨 WAIT! Don\'t leave without securing your financial freedom!\n\n💸 Nigeria\'s economy is collapsing while you read this.\n\n✅ Click OK for an exclusive ₦20,000 discount\n❌ Click Cancel to remain trapped in poverty')) {
+                if (confirm('🚨 WAIT! Don\'t leave without securing your financial freedom!
+
+💸 Nigeria\'s economy is collapsing while you read this.
+
+✅ Click OK for an exclusive ₦20,000 discount
+❌ Click Cancel to remain trapped in poverty')) {
                     alert('🎉 EXCLUSIVE DISCOUNT ACTIVATED!\n\nUse code: ESCAPE20K for ₦20,000 off any plan!\n\nThis code expires in 10 minutes. Act NOW!');
                     document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
                 }
