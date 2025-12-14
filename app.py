@@ -30,6 +30,7 @@ from utils.rate_limiter import rate_limit
 from blueprints.main_routes import main_bp
 from blueprints.teacher_auth_routes import teacher_auth_bp
 from blueprints.teacher_courses_routes import teacher_courses_bp
+from blueprints.teacher_api_routes import teacher_api_bp
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -40,6 +41,7 @@ security_middleware = SecurityMiddleware(app)
 app.register_blueprint(main_bp)
 app.register_blueprint(teacher_auth_bp)
 app.register_blueprint(teacher_courses_bp)
+app.register_blueprint(teacher_api_bp)
 
 # Configuration
 app.config['SECRET_KEY'] = get_env_variable('SECRET_KEY', 'vibes-university-secret-key')
