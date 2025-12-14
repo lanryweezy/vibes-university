@@ -936,12 +936,124 @@ def admin_users():
         if conn:
             return_db_connection(conn)
     return render_template_string('''
-    <html><head><title>User Management</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px;}.header{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#ff6b35;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.table{width:100%;border-collapse:collapse;background:#222;border-radius:10px;overflow:hidden;}.table th,.table td{padding:15px;text-align:left;border-bottom:1px solid #444;}.table th{background:#333;color:#ff6b35;font-weight:bold;}.table tr:hover{background:#333;}.status-active{color:#4CAF50;}.status-inactive{color:#f44336;}.user-email{color:#ff6b35;}</style></head>
+    <html><head><title>User Management</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px;}.header{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#ff6b35;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.table{width:100%;border-collapse:collapse;background:#222;border-radius:10px;overflow:hidden;}.table th,.table td{padding:15px;text-align:left;border-bottom:1px solid #444;}.table th{background:#333;color:#ff6b35;font-weight:bold;}.table tr:hover{background:#333;}.status-active{color:#4CAF50;}.status-inactive{color:#f44336;}.user-email{color:#ff6b35;}.btn{background:#ff6b35;color:#fff;padding:8px 15px;border:none;border-radius:5px;text-decoration:none;font-size:14px;}.btn:hover{opacity:0.8;}.btn-add-teacher{background:#4CAF50;}.section{margin:20px 0;}.section-header{display:flex;justify-content:space-between;align-items:center;}</style></head>
     <body><div class="header"><h1>👥 User Management</h1><a href="{{url_for('admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
+    <div class="section"><div class="section-header"><h2>All Users</h2></div>
     <table class="table"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Enrollments</th><th>Completed</th><th>Total Spent</th><th>Joined</th><th>Status</th></tr>
     {% for user in users %}<tr><td>{{user['full_name']}}</td><td class="user-email">{{user['email']}}</td><td>{{user['phone']}}</td><td>{{user['enrollment_count']}}</td><td>{{user['completed_enrollments']}}</td><td>₦{{user['total_spent'] or 0}}</td><td>{{user['created_at']}}</td><td class="{{'status-active' if user['is_active'] else 'status-inactive'}}">{{'Active' if user['is_active'] else 'Inactive'}}</td></tr>{% endfor %}
-    </table></body></html>
+    </table></div>
+    <div style="text-align:center;margin:30px 0;"><a href="{{url_for('admin_manage_teachers')}}" class="btn btn-add-teacher">Manage Teachers</a></div>
+    </body></html>
     ''', users=users)
+
+@app.route('/admin/teachers', methods=['GET', 'POST'])
+def admin_manage_teachers():
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    
+    message = ''
+    conn = None
+    
+    # Handle form submission for adding a new teacher
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        full_name = sanitize_input(request.form.get('full_name'))
+        phone = request.form.get('phone')
+        specialization = sanitize_input(request.form.get('specialization', ''))
+        
+        # Validate inputs
+        if not email or not validate_email(email):
+            message = 'Valid email is required.'
+        elif not password or len(password) < 6:
+            message = 'Password must be at least 6 characters.'
+        elif not full_name:
+            message = 'Full name is required.'
+        elif not phone or not validate_phone(phone):
+            message = 'Valid phone number is required.'
+        else:
+            try:
+                conn = get_db_connection()
+                # Check if user already exists
+                existing_user = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
+                if existing_user:
+                    message = 'User with this email already exists.'
+                    log_warning(app_logger, "Teacher creation failed - user already exists", email=email)
+                else:
+                    # Create user with teacher role
+                    password_hash = generate_password_hash(password)
+                    cursor = conn.cursor()
+                    cursor.execute('INSERT INTO users (email, password_hash, full_name, phone, role) VALUES (?, ?, ?, ?, ?)',
+                                   (email, password_hash, full_name, phone, 'teacher'))
+                    user_id = cursor.lastrowid
+                    
+                    # Create teacher profile
+                    cursor.execute('INSERT INTO teachers (user_id, specialization) VALUES (?, ?)',
+                                   (user_id, specialization))
+                    
+                    conn.commit()
+                    log_info(app_logger, "Teacher created successfully", user_id=user_id, email=email)
+                    message = 'Teacher created successfully!'
+            except Exception as e:
+                log_error(app_logger, "Teacher creation failed with exception", error=str(e))
+                message = 'Teacher creation failed. Please try again.'
+            finally:
+                if conn:
+                    return_db_connection(conn)
+    
+    # Get all teachers
+    try:
+        conn = get_db_connection()
+        teachers = conn.execute("""
+            SELECT u.id, u.email, u.full_name, u.phone, u.created_at, t.specialization
+            FROM users u
+            JOIN teachers t ON u.id = t.user_id
+            ORDER BY u.created_at DESC
+        """).fetchall()
+    except Exception as e:
+        log_error(db_logger, "Failed to retrieve teachers data", error=str(e))
+        return "Error loading teachers", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+    
+    return render_template_string('''
+    <html><head><title>Manage Teachers</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px;}.header{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#ff6b35;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#222;padding:20px;border-radius:10px;margin-bottom:30px;}.section h3{color:#ff6b35;margin-top:0;}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;color:#ccc;}.form-group input, .form-group textarea{width:100%;padding:10px;border-radius:8px;border:none;background:#444;color:#fff;box-sizing:border-box;}.btn{background:#4CAF50;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}.btn-delete{background:#f44336;}.success-msg{padding:15px;border-radius:8px;margin-bottom:20px;background-color:#333;color:#4CAF50;border:1px solid #4CAF50;}.error-msg{padding:15px;border-radius:8px;margin-bottom:20px;background-color:#333;color:#f44336;border:1px solid #f44336;}.table{width:100%;border-collapse:collapse;margin-top:15px;}.table th,.table td{padding:12px;text-align:left;border-bottom:1px solid #444;}.table th{background:#333;color:#ff6b35;}.table tr:hover{background:#333;}.actions{display:flex;gap:10px;}.action-btn{padding:5px 10px;border-radius:5px;text-decoration:none;font-size:12px;}.delete-form{display:inline;}</style></head>
+    <body><div class="header"><h1>👨‍🏫 Manage Teachers</h1><a href="{{url_for('admin_users')}}" class="back-btn">← User Management</a></div>
+    {% if message %}<div class="{{'success-msg' if 'successfully' in message else 'error-msg'}}">{{message}}</div>{% endif %}
+    <div class="section"><h3>Add New Teacher</h3><form method="post">
+        <div class="form-group"><label for="full_name">Full Name *</label><input type="text" name="full_name" id="full_name" required></div>
+        <div class="form-group"><label for="email">Email *</label><input type="email" name="email" id="email" required></div>
+        <div class="form-group"><label for="phone">Phone *</label><input type="text" name="phone" id="phone" required></div>
+        <div class="form-group"><label for="specialization">Specialization</label><input type="text" name="specialization" id="specialization"></div>
+        <div class="form-group"><label for="password">Password *</label><input type="password" name="password" id="password" required minlength="6"></div>
+        <button type="submit" class="btn">➕ Add Teacher</button>
+    </form></div>
+    <div class="section"><h3>Current Teachers</h3>
+    {% if teachers %}
+    <table class="table"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Joined</th><th>Actions</th></tr>
+    {% for teacher in teachers %}<tr><td>{{teacher['full_name']}}</td><td>{{teacher['email']}}</td><td>{{teacher['phone']}}</td><td>{{teacher['specialization']}}</td><td>{{teacher['created_at']}}</td><td class="actions"><form method="post" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this teacher? This action cannot be undone.')"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="btn btn-delete" formaction="/api/admin/users/{{teacher['id']}}">🗑️ Delete</button></form></td></tr>{% endfor %}
+    </table>
+    {% else %}<p>No teachers found.</p>{% endif %}
+    </div>
+    <script>document.querySelectorAll('.delete-form').forEach(form => {form.addEventListener('submit', e => {if (!confirm('Are you sure you want to delete this teacher? This action cannot be undone.')) {e.preventDefault();}});});</script>
+    </body></html>
+    ''', teachers=teachers, message=message)
+
+@app.route('/api/admin/users/<int:user_id>', methods=['POST'])
+def admin_delete_user_via_post(user_id):
+    # Handle DELETE requests sent via POST with _method parameter
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+    
+    if request.form.get('_method') == 'DELETE':
+        # Import the admin API blueprint function to handle deletion
+        from blueprints.admin_api_routes import api_admin_delete_user
+        # Call the API function to delete the user
+        result = api_admin_delete_user(user_id)
+        # Redirect back to the teachers page with a message
+        return redirect(url_for('admin_manage_teachers', message='Teacher deleted successfully'))
+    
+    return redirect(url_for('admin_manage_teachers'))
 
 @app.route('/admin/analytics')
 def admin_analytics():

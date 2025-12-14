@@ -716,13 +716,18 @@ def api_admin_delete_user(user_id):
     try:
         conn = get_db_connection()
         # Check if user exists
-        user = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+        user = conn.execute("SELECT id, role FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             if conn:
                 return_db_connection(conn)
             return jsonify({'error': 'User not found'}), 404
 
         cursor = conn.cursor()
+        # If user is a teacher, delete their teacher profile first
+        if user['role'] == 'teacher':
+            cursor.execute("DELETE FROM teachers WHERE user_id = ?", (user_id,))
+        
+        # Delete the user
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
         deleted_rows = cursor.rowcount
         conn.commit()
