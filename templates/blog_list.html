@@ -3,23 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI & Vibes - Blog</title>
+    <title>AI & Vibes - Blog | Mastering the AI Era</title>
+    <meta name="description" content="Explore in-depth blogs on Artificial Intelligence, wealth creation, and life-changing technology by Sulaiman Olanrewaju Adebayo.">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Arial', sans-serif; background: #000; color: #fff; margin: 0; padding: 0; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { border-bottom: 2px solid #ff6b35; padding: 20px 0; text-align: center; }
-        header h1 { color: #ff6b35; margin: 0; }
-        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; margin-top: 40px; }
-        .blog-card { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; overflow: hidden; transition: transform 0.3s; }
-        .blog-card:hover { transform: translateY(-5px); border-color: #ff6b35; }
-        .blog-image { width: 100%; height: 200px; object-fit: cover; }
-        .blog-content { padding: 20px; }
-        .blog-title { font-size: 1.5rem; color: #ff6b35; margin-bottom: 10px; text-decoration: none; display: block; }
-        .blog-meta { font-size: 0.9rem; color: #888; margin-bottom: 15px; }
-        .blog-excerpt { font-size: 1rem; color: #ccc; line-height: 1.6; }
-        .read-more { display: inline-block; margin-top: 15px; color: #ff6b35; text-decoration: none; font-weight: bold; }
-        .back-home { color: #ff6b35; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+        :root {
+            --primary: #ff6b35;
+            --primary-dark: #e65a2b;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            max-width: 600px;
+            margin: 10px auto 0;
+        }
+
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 32px;
+        }
+
+        .blog-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+        }
+
+        .blog-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px -15px rgba(255, 107, 53, 0.2);
+        }
+
+        .blog-image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            overflow: hidden;
+        }
+
+        .blog-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .blog-card:hover .blog-image {
+            transform: scale(1.05);
+        }
+
+        .blog-content {
+            padding: 28px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .blog-title {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            line-height: 1.3;
+            transition: color 0.3s;
+        }
+
+        .blog-title:hover {
+            color: var(--primary);
+        }
+
+        .blog-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .blog-meta i {
+            color: var(--primary);
+        }
+
+        .blog-excerpt {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: auto;
+            transition: gap 0.3s;
+        }
+
+        .read-more:hover {
+            gap: 12px;
+        }
+
+        .back-home {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-home:hover {
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 2.5rem; }
+            .blog-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -27,26 +171,32 @@
         <a href="/" class="back-home"><i class="fas fa-arrow-left"></i> Back to Home</a>
         <header>
             <h1>AI & Vibes Blog</h1>
-            <p>Insights on AI, Wealth, and the Future</p>
+            <p>Empowering minds with cutting-edge AI insights for wealth, design, and education.</p>
         </header>
 
         <div class="blog-grid">
             {% for blog in blogs %}
             <div class="blog-card">
-                {% if blog.image_url %}
-                <img src="{{ blog.image_url }}" alt="{{ blog.title }}" class="blog-image">
-                {% else %}
-                <div class="blog-image" style="background: #333; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-robot fa-3x" style="color: #555;"></i>
+                <div class="blog-image-wrapper">
+                    {% if blog.image_url %}
+                    <img src="{{ blog.image_url }}" alt="{{ blog.title }}" class="blog-image">
+                    {% else %}
+                    <div class="blog-image" style="background: #1e293b; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-robot fa-4x" style="color: #334155;"></i>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
                 <div class="blog-content">
                     <a href="/blog/{{ blog.slug }}" class="blog-title">{{ blog.title }}</a>
-                    <div class="blog-meta">By {{ blog.author }} | {{ blog.created_at }}</div>
-                    <div class="blog-excerpt">
-                        {{ blog.content | striptags | truncate(150) }}
+                    <div class="blog-meta">
+                        <i class="fas fa-user-circle"></i> {{ blog.author_name }}
+                        <span style="margin: 0 8px;">•</span>
+                        <i class="fas fa-calendar-alt"></i> {{ blog.created_at.split(' ')[0] if ' ' in blog.created_at else blog.created_at }}
                     </div>
-                    <a href="/blog/{{ blog.slug }}" class="read-more">Read More</a>
+                    <div class="blog-excerpt">
+                        {{ blog.excerpt or (blog.content | striptags | truncate(120)) }}
+                    </div>
+                    <a href="/blog/{{ blog.slug }}" class="read-more">Read Article <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             {% endfor %}

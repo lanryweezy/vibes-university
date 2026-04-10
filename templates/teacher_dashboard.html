@@ -3,275 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - Vibes University</title>
+    <title>Teacher Dashboard | Vibes University</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #4CAF50;
+            --primary-light: #81C784;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #ff6b35;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #000000, #1a1a1a, #000000);
-            color: #ffffff;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Header */
-        .header {
-            background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 15px 0;
-            border-bottom: 2px solid #4CAF50;
-            margin-bottom: 30px;
-        }
-
-        .nav {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #020617;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 32px;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
         }
 
         .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary);
             text-transform: uppercase;
             letter-spacing: 2px;
+            margin-bottom: 48px;
         }
 
-        .nav-links {
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
             display: flex;
-            gap: 20px;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.3s;
         }
 
-        .nav-links a {
-            color: #ffffff;
+        .nav-link:hover, .nav-link.active {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-link i { font-size: 1.1rem; }
+
+        .logout-link {
+            margin-top: auto;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             text-decoration: none;
             font-weight: 600;
-            transition: color 0.3s;
+            padding: 12px 16px;
         }
 
-        .nav-links a:hover {
-            color: #4CAF50;
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            margin-left: 280px;
+            padding: 48px;
+            max-width: 1200px;
         }
 
-        .logout-btn {
-            background: #4CAF50;
-            color: #ffffff;
-            padding: 8px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 48px;
         }
 
-        /* Dashboard Content */
-        .dashboard-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .dashboard-header h1 {
+        h1 {
+            font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
-            color: #4CAF50;
-            margin-bottom: 10px;
+            margin: 0 0 8px 0;
         }
 
+        .welcome-text { color: var(--text-muted); font-size: 1.1rem; }
+
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
         }
 
         .stat-card {
-            background: rgba(76, 175, 80, 0.1);
-            border: 2px solid #4CAF50;
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             transition: transform 0.3s;
         }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+        .stat-card:hover { transform: translateY(-5px); border-color: var(--primary); }
 
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: #4CAF50;
-            margin-bottom: 10px;
-        }
+        .stat-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-value { font-size: 2rem; font-weight: 800; color: #fff; }
 
-        .stat-label {
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .section {
-            background: rgba(30, 30, 30, 0.8);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 1px solid #444;
-        }
-
-        .section h2 {
-            color: #4CAF50;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-        }
-
-        .quick-actions {
+        /* Action Grid */
+        .action-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
         }
 
         .action-card {
-            background: rgba(76, 175, 80, 0.15);
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 32px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             text-decoration: none;
-            color: #ffffff;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: all 0.3s;
         }
 
         .action-card:hover {
-            background: rgba(76, 175, 80, 0.3);
-            transform: translateY(-3px);
+            border-color: var(--primary);
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .action-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: #4CAF50;
+            width: 56px;
+            height: 56px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary);
         }
 
-        .action-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 10px;
+        .action-title { font-size: 1.25rem; font-weight: 700; }
+        .action-desc { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; }
+
+        /* Recent Activity */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .action-desc {
-            font-size: 0.9rem;
-            color: #ccc;
+        .activity-feed {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            
-            .hero h2 {
-                font-size: 1.8rem;
-            }
+        .activity-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .activity-content { font-size: 1rem; color: var(--text-main); }
+        .activity-time { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 80px; padding: 24px 16px; }
+            .logo, .nav-link span, .logout-link span { display: none; }
+            .main-content { margin-left: 80px; }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <nav class="nav container">
-            <div class="logo">VIBES UNIVERSITY</div>
-            <div class="nav-links">
-                <a href="#dashboard">Dashboard</a>
-                <a href="/teacher/course-studio">Course Studio</a>
-                <a href="#courses">My Courses</a>
-                <a href="#students">Students</a>
-                <a href="#earnings">Earnings</a>
-                <a href="/teacher/logout" class="logout-btn">Logout</a>
-            </div>
+    <aside class="sidebar">
+        <div class="logo">Vibes U</div>
+        <nav class="nav-menu">
+            <li class="nav-item">
+                <a href="/teacher/dashboard" class="nav-link active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Overview</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/teacher/course-studio" class="nav-link">
+                    <i class="fas fa-rocket"></i>
+                    <span>Course Studio</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Students</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/blogs" class="nav-link">
+                    <i class="fas fa-rss"></i>
+                    <span>AI Blog</span>
+                </a>
+            </li>
         </nav>
-    </header>
+        <a href="/teacher/logout" class="logout-link">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </aside>
 
-    <!-- Dashboard Content -->
-    <div class="container">
-        <div class="dashboard-header">
-            <h1>🎓 Teacher Dashboard</h1>
-            <p>Welcome back, {{ teacher_name }}! Here's your teaching overview.</p>
-        </div>
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1>Teacher Dashboard</h1>
+                <p class="welcome-text">Welcome back, <strong>{{ teacher_name }}</strong>. Here's what's happening today.</p>
+            </div>
+        </header>
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number">5</div>
                 <div class="stat-label">Active Courses</div>
+                <div class="stat-value">5</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">120</div>
                 <div class="stat-label">Total Students</div>
+                <div class="stat-value">120</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">₦2,400,000</div>
-                <div class="stat-label">Total Earnings</div>
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">₦2.4M</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">4.9</div>
-                <div class="stat-label">Average Rating</div>
+                <div class="stat-label">Avg. Rating</div>
+                <div class="stat-value">4.9 <i class="fas fa-star" style="color: #fbbf24; font-size: 1.25rem;"></i></div>
             </div>
         </div>
 
-        <div class="section">
-            <h2>Quick Actions</h2>
-            <div class="quick-actions">
-                <a href="/teacher/course-studio" class="action-card">
-                    <div class="action-icon">🚀</div>
-                    <div class="action-title">Course Studio</div>
-                    <div class="action-desc">Design and create new courses</div>
-                </a>
-                <a href="#" class="action-card">
-                    <div class="action-icon">📚</div>
-                    <div class="action-title">Manage Courses</div>
-                    <div class="action-desc">Create and edit your courses</div>
-                </a>
-                <a href="#" class="action-card">
-                    <div class="action-icon">👥</div>
-                    <div class="action-title">Student Management</div>
-                    <div class="action-desc">View and support your students</div>
-                </a>
-                <a href="#" class="action-card">
-                    <div class="action-icon">📊</div>
-                    <div class="action-title">Performance Reports</div>
-                    <div class="action-desc">Track student progress</div>
-                </a>
-                <a href="#" class="action-card">
-                    <div class="action-icon">💰</div>
-                    <div class="action-title">Earnings</div>
-                    <div class="action-desc">View your income and payouts</div>
-                </a>
-            </div>
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="action-grid">
+            <a href="/teacher/course-studio" class="action-card">
+                <div class="action-icon"><i class="fas fa-plus"></i></div>
+                <div class="action-title">Course Studio</div>
+                <div class="action-desc">Design curriculum, upload video lessons, and create interactive quizzes with our visual editor.</div>
+            </a>
+            <a href="#" class="action-card">
+                <div class="action-icon"><i class="fas fa-graduation-cap"></i></div>
+                <div class="action-title">Manage Students</div>
+                <div class="action-desc">Track progress, view quiz attempts, and provide direct feedback to your enrolled students.</div>
+            </a>
+            <a href="#" class="action-card">
+                <div class="action-icon"><i class="fas fa-wallet"></i></div>
+                <div class="action-title">Earnings & Payouts</div>
+                <div class="action-desc">Review your detailed revenue breakdown and manage your withdrawal preferences.</div>
+            </a>
         </div>
 
-        <div class="section">
-            <h2>Recent Activity</h2>
-            <div style="background: rgba(50, 50, 50, 0.5); border-radius: 10px; padding: 20px;">
-                <p>• New student enrolled in "AI Marketing Mastery" - 2 hours ago</p>
-                <p>• Lesson completed by student - 5 hours ago</p>
-                <p>• New review received (5 stars) - 1 day ago</p>
-                <p>• Monthly earnings report available - 2 days ago</p>
+        <h2 class="section-title">Recent Activity</h2>
+        <div class="activity-feed">
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-content">New student <strong>Chioma O.</strong> enrolled in <em>AI Marketing Mastery</em>.</div>
+                    <div class="activity-time">2 hours ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-content"><strong>David I.</strong> completed the final lesson in <em>AI Business Automation</em>.</div>
+                    <div class="activity-time">5 hours ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-dot" style="background: var(--accent);"></div>
+                <div>
+                    <div class="activity-content">New 5-star review received from <strong>Blessing U.</strong></div>
+                    <div class="activity-time">1 day ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-content">Monthly performance report for March is now available for download.</div>
+                    <div class="activity-time">2 days ago</div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 </body>
 </html>
