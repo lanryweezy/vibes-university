@@ -7,7 +7,8 @@ import os
 from utils.db_utils import get_db_connection, return_db_connection
 from utils.logging_utils import app_logger, db_logger, security_logger, payment_logger, log_info, log_error, log_warning
 # Import security utilities
-from utils.security_utils import require_teacher_auth, validate_email, validate_phone, sanitize_input
+from utils.security_utils import validate_email, validate_phone, sanitize_input
+from utils.auth_utils import require_teacher_auth
 # Import rate limiter
 from utils.rate_limiter import rate_limit
 
