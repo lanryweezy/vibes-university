@@ -33,13 +33,14 @@ def api_admin_create_course():
     name = course_name
     description = course_description
     settings = data.get('settings', {})
+    teacher_id = session.get('teacher_id')
     
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO courses (name, description, course_settings) VALUES (?, ?, ?)',
-                      (name, description, json.dumps(settings)))
+        cursor.execute('INSERT INTO courses (name, description, course_settings, teacher_id) VALUES (?, ?, ?, ?)',
+                      (name, description, json.dumps(settings), teacher_id))
         course_id = cursor.lastrowid
         conn.commit()
         log_info(app_logger, "Course created successfully", course_id=course_id, course_name=name)

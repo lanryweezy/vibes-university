@@ -8,6 +8,7 @@ from utils.db_utils import get_db_connection, return_db_connection
 from utils.logging_utils import app_logger, security_logger, log_info, log_error, log_warning
 from utils.security_utils import validate_email, validate_phone, sanitize_input, get_env_variable
 from utils.security_middleware import generate_csrf_token, validate_csrf_token, csrf_protect
+from utils.auth_utils import require_teacher_auth
 
 teacher_auth_bp = Blueprint('teacher_auth_bp', __name__, url_prefix='/teacher')
 
@@ -95,15 +96,221 @@ def teacher_login():
     ''', message=message, csrf_token=csrf_token)
 
 @teacher_auth_bp.route('/dashboard')
+@require_teacher_auth
 def teacher_dashboard():
     """Teacher dashboard."""
-    # Check if teacher is logged in
-    if not session.get('teacher_logged_in'):
-        return redirect(url_for('teacher_auth_bp.teacher_login'))
-    
     teacher_name = session.get('teacher_name', 'Teacher')
+    teacher_id = session.get('teacher_id')
     
-    return render_template('teacher_dashboard.html', teacher_name=teacher_name)
+    conn = None
+    try:
+        conn = get_db_connection()
+        # Get courses for this teacher
+        courses = conn.execute("SELECT id, name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
+        course_ids = [c['id'] for c in courses]
+
+        # Stats
+        course_count = len(courses)
+        student_count = 0
+        total_earnings = 0
+
+        if course_ids:
+            # Simple simulation of student count and earnings based on enrollments
+            # In a real app, you'd match course names to course_type or use a mapping table
+            placeholders = ','.join(['?'] * len(courses))
+            course_names = [c['name'] for c in courses]
+            enrollments = conn.execute(f"SELECT price FROM enrollments WHERE course_type IN ({placeholders}) AND payment_status = 'completed'", course_names).fetchall()
+            student_count = len(enrollments)
+            total_earnings = sum([e['price'] for e in enrollments])
+
+        return render_template('teacher_dashboard.html',
+                               teacher_name=teacher_name,
+                               active_courses=course_count,
+                               total_students=student_count,
+                               total_earnings=total_earnings)
+    except Exception as e:
+        log_error(app_logger, "Dashboard loading error", error=str(e))
+        return render_template('teacher_dashboard.html', teacher_name=teacher_name, active_courses=0, total_students=0, total_earnings=0)
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+@teacher_auth_bp.route('/earnings')
+@require_teacher_auth
+def view_earnings():
+    """Teacher earnings page."""
+    teacher_id = session.get('teacher_id')
+    conn = None
+    try:
+        conn = get_db_connection()
+        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
+        course_names = [c['name'] for c in courses]
+
+        earnings_data = []
+        total_earnings = 0
+        if course_names:
+            placeholders = ','.join(['?'] * len(course_names))
+            earnings_data = conn.execute(f"""
+                SELECT course_type, COUNT(*) as enrollment_count, SUM(price) as revenue
+                FROM enrollments
+                WHERE course_type IN ({placeholders}) AND payment_status = 'completed'
+                GROUP BY course_type
+            """, course_names).fetchall()
+            total_earnings = sum([row['revenue'] for row in earnings_data])
+
+        return render_template_string('''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>My Earnings | Vibes U</title>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+            <style>
+                :root { --primary: #4CAF50; --bg-dark: #0f172a; --card-bg: #1e293b; --text-main: #f1f5f9; --text-muted: #94a3b8; }
+                body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; }
+                .sidebar { width: 280px; background: #020617; border-right: 1px solid rgba(255,255,255,0.05); height: 100vh; position: fixed; padding: 32px; }
+                .logo { font-size: 1.25rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 48px; }
+                .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-muted); text-decoration: none; border-radius: 12px; transition: 0.3s; margin-bottom: 8px; }
+                .nav-link:hover, .nav-link.active { background: rgba(76, 175, 80, 0.1); color: var(--primary); }
+                .main-content { margin-left: 280px; padding: 48px; flex-grow: 1; }
+                h1 { font-size: 2.5rem; margin-bottom: 8px; }
+                .earnings-card { background: linear-gradient(135deg, var(--primary) 0%, #2e7d32 100%); padding: 40px; border-radius: 24px; margin-bottom: 48px; }
+                .total-label { text-transform: uppercase; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; opacity: 0.9; }
+                .total-value { font-size: 3.5rem; font-weight: 800; margin-top: 8px; }
+                .table-container { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+                table { width: 100%; border-collapse: collapse; }
+                th { text-align: left; padding: 20px 32px; background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
+                td { padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            </style>
+        </head>
+        <body>
+            <aside class="sidebar">
+                <div class="logo">Vibes U</div>
+                <a href="/teacher/dashboard" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+                <a href="/teacher/students" class="nav-link"><i class="fas fa-users"></i> Students</a>
+                <a href="/teacher/earnings" class="nav-link active"><i class="fas fa-wallet"></i> Earnings</a>
+                <a href="/teacher/course-studio" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
+                <a href="/teacher/logout" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </aside>
+            <main class="main-content">
+                <h1>Financial Performance</h1>
+                <div class="earnings-card">
+                    <div class="total-label">Total Lifetime Earnings</div>
+                    <div class="total-value">₦{{ "{:,}".format(total_earnings) }}</div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Course Name</th><th>Total Enrolled</th><th>Revenue Generated</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in earnings_data %}
+                            <tr>
+                                <td style="font-weight:600;">{{ item.course_type }}</td>
+                                <td>{{ item.enrollment_count }}</td>
+                                <td style="color:var(--primary); font-weight:700;">₦{{ "{:,}".format(item.revenue) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </body>
+        </html>
+        ''', earnings_data=earnings_data, total_earnings=total_earnings)
+    except Exception as e:
+        log_error(app_logger, "Earnings page error", error=str(e))
+        return "Error loading earnings", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+@teacher_auth_bp.route('/students')
+@require_teacher_auth
+def manage_students():
+    """Teacher student management page."""
+    teacher_id = session.get('teacher_id')
+    conn = None
+    try:
+        conn = get_db_connection()
+        # Find courses taught by this teacher
+        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
+        course_names = [c['name'] for c in courses]
+
+        students = []
+        if course_names:
+            placeholders = ','.join(['?'] * len(course_names))
+            students = conn.execute(f"""
+                SELECT u.full_name, u.email, e.course_type, e.enrolled_at
+                FROM users u
+                JOIN enrollments e ON u.id = e.user_id
+                WHERE e.course_type IN ({placeholders}) AND e.payment_status = 'completed'
+                ORDER BY e.enrolled_at DESC
+            """, course_names).fetchall()
+
+        return render_template_string('''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Manage Students | Vibes U</title>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+            <style>
+                :root { --primary: #4CAF50; --bg-dark: #0f172a; --card-bg: #1e293b; --text-main: #f1f5f9; --text-muted: #94a3b8; }
+                body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; }
+                .sidebar { width: 280px; background: #020617; border-right: 1px solid rgba(255,255,255,0.05); height: 100vh; position: fixed; padding: 32px; }
+                .logo { font-size: 1.25rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 48px; }
+                .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--text-muted); text-decoration: none; border-radius: 12px; transition: 0.3s; margin-bottom: 8px; }
+                .nav-link:hover, .nav-link.active { background: rgba(76, 175, 80, 0.1); color: var(--primary); }
+                .main-content { margin-left: 280px; padding: 48px; flex-grow: 1; }
+                h1 { font-size: 2.5rem; margin-bottom: 32px; }
+                .table-container { background: var(--card-bg); border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+                table { width: 100%; border-collapse: collapse; }
+                th { text-align: left; padding: 20px 32px; background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+                td { padding: 20px 32px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                tr:last-child td { border-bottom: none; }
+                .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: rgba(76, 175, 80, 0.1); color: var(--primary); }
+            </style>
+        </head>
+        <body>
+            <aside class="sidebar">
+                <div class="logo">Vibes U</div>
+                <a href="/teacher/dashboard" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+                <a href="/teacher/students" class="nav-link active"><i class="fas fa-users"></i> Students</a>
+                <a href="/teacher/course-studio" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
+                <a href="/teacher/logout" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </aside>
+            <main class="main-content">
+                <h1>Student Management</h1>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Student Name</th><th>Email</th><th>Course</th><th>Enrolled Date</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td style="font-weight:600;">{{ student.full_name }}</td>
+                                <td style="color:var(--text-muted);">{{ student.email }}</td>
+                                <td><span class="badge">{{ student.course_type }}</span></td>
+                                <td style="font-size:0.9rem;">{{ student.enrolled_at.split(' ')[0] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </body>
+        </html>
+        ''', students=students)
+    except Exception as e:
+        log_error(app_logger, "Student management error", error=str(e))
+        return "Error loading students", 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @teacher_auth_bp.route('/logout')
 def teacher_logout():
