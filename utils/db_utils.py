@@ -239,6 +239,23 @@ class DatabaseManager:
                 expires_at TIMESTAMP
             )
         ''')
+
+        # Blogs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS blogs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                slug TEXT UNIQUE NOT NULL,
+                content TEXT NOT NULL,
+                excerpt TEXT,
+                image_url TEXT,
+                author_name TEXT,
+                author_linkedin TEXT,
+                author_twitter TEXT,
+                author_ig TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
         # Add columns if they don't exist (for backward compatibility)
         try:

@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import json
 import sqlite3
+from werkzeug.security import check_password_hash
 
 # Import utilities
 from utils.db_utils import get_db_connection, return_db_connection
@@ -10,27 +11,25 @@ from utils.logging_utils import app_logger, db_logger, security_logger, payment_
 # Import security utilities
 from utils.security_utils import validate_email, validate_phone, sanitize_input, get_env_variable
 # Import CSRF protection
-from utils.security_middleware import generate_csrf_token, csrf_protect
+from utils.security_middleware import generate_csrf_token, csrf_protect, validate_csrf_token
 
 main_bp = Blueprint('main_bp', __name__)
 
 @main_bp.route('/')
 def home():
-    """Serve the main course platform page"""
+    """Serve the main landing page"""
+    conn = None
     try:
-        # Use current directory instead of hardcoded Linux path
-        # Adjust path since this file is in 'blueprints' subdirectory
-        # os.path.abspath(__file__) is /path/to/repo/blueprints/main_routes.py
-        # os.path.dirname(...) is /path/to/repo/blueprints
-        # .replace(...) gives /path/to/repo
-        base_dir = os.path.dirname(os.path.abspath(__file__)).replace('/blueprints', '').replace('\\blueprints', '')
-        index_path = os.path.join(base_dir, 'index.html')
-        with open(index_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return jsonify({'error': 'Platform not found'}), 404
+        conn = get_db_connection()
+        # Get latest 3 blogs for the landing page section
+        latest_blogs = conn.execute('SELECT * FROM blogs ORDER BY created_at DESC LIMIT 3').fetchall()
+        return render_template('index.html', latest_blogs=latest_blogs)
     except Exception as e:
-        return jsonify({'error': f'Error loading platform: {str(e)}'}), 500
+        log_error(app_logger, "Failed to load home page", error=str(e))
+        return render_template('index.html', latest_blogs=[])
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 @main_bp.route('/health', methods=['GET'])
 def health_check():
@@ -42,18 +41,53 @@ def health_check():
     })
 
 @main_bp.route('/student/login', methods=['GET', 'POST'])
+@csrf_protect
 def student_login():
-    """Render student login page and handle login."""
+    """Render student login page and handle actual authentication."""
+    csrf_token = generate_csrf_token()
     message = ''
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        # This is a placeholder for actual login logic
-        message = f"Login attempt with {email}"
-        # In a real app, you would verify credentials and manage session
-        # For now, just show a message.
+        if not validate_csrf_token():
+            message = 'Invalid request.'
+        else:
+            email = request.form.get('email')
+            password = request.form.get('password')
 
-    return render_template('student_login.html', message=message)
+            if not email or not validate_email(email):
+                message = 'Valid email is required.'
+            elif not password:
+                message = 'Password is required.'
+            else:
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    # Check if user exists and is a student
+                    # Note: We also allow teachers to login here but redirect appropriately if needed
+                    # However, for now, we follow the student flow
+                    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+
+                    if not user or not check_password_hash(user['password_hash'], password):
+                        message = 'Invalid credentials.'
+                        log_warning(security_logger, "Student login failed - invalid credentials", email=email)
+                    else:
+                        # Check if user has a completed enrollment
+                        enrollment = conn.execute("SELECT e.*, u.email, u.full_name FROM enrollments e JOIN users u ON e.user_id = u.id WHERE e.user_id = ? AND e.payment_status = 'completed' LIMIT 1", (user['id'],)).fetchone()
+
+                        if not enrollment:
+                            message = 'No active enrollment found. Please complete your payment first.'
+                        else:
+                            # Set session
+                            session['enrollment'] = dict(enrollment)
+                            log_info(security_logger, "Student login successful", user_id=user['id'], email=email)
+                            return redirect(url_for('dashboard'))
+                except Exception as e:
+                    log_error(app_logger, "Student login failed with exception", error=str(e))
+                    message = 'Login failed. Please try again.'
+                finally:
+                    if conn:
+                        return_db_connection(conn)
+
+    return render_template('student_login.html', message=message, csrf_token=csrf_token)
 
 @main_bp.route('/logout')
 def logout():
