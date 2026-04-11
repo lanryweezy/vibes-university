@@ -18,6 +18,16 @@ def generate_robust_content(topic, author, other_topics):
     is_tutorial = "tutorial" in topic.lower()
     is_tools = "tools" in topic.lower() or "list" in topic.lower()
     is_wealth = "wealth" in topic.lower() or "money" in topic.lower() or "finance" in topic.lower()
+    is_africa = "africa" in topic.lower()
+    is_graphics = "graphics" in topic.lower() or "design" in topic.lower()
+    is_marketing = "marketing" in topic.lower()
+    is_dev = "developer" in topic.lower() or "coding" in topic.lower()
+    is_founder = "founder" in topic.lower() or "startup" in topic.lower()
+    is_teacher = "teacher" in topic.lower() or "classroom" in topic.lower()
+    is_it = "it admin" in topic.lower() or "systems mastery" in topic.lower()
+    is_cyber = "cyber" in topic.lower()
+    is_billion = "billion" in topic.lower() or "divide" in topic.lower()
+    is_read = "read" in topic.lower() or "bibliophile" in topic.lower()
 
     sections = [
         {
@@ -37,13 +47,104 @@ def generate_robust_content(topic, author, other_topics):
     ]
 
     if is_tutorial:
+        tool_name = "Gemini" if "gemini" in topic.lower() else ("Claude" if "claude" in topic.lower() else "ChatGPT")
         sections.append({
-            "h2": "Step-by-Step Implementation Guide",
+            "h2": f"Step-by-Step {tool_name} Setup Guide",
             "p": [
-                "1. Initial Configuration: Start by setting up your environment. Whether you are using a web interface or an API, ensure your security parameters are maximized. API keys should be stored in environment variables, never hardcoded.",
-                "2. Prompt Engineering: The art of the prompt is the art of the result. Use the 'Role-Context-Task-Constraint' framework. Define who the AI is, why it's doing the task, what the task is, and what it must avoid.",
-                "3. Iterative Refinement: Rarely is the first result perfect. Use the feedback loop. Ask the AI to critique its own work, then ask it to improve based on that critique.",
-                "4. Deployment and Scaling: Once you have a working model, look into automation platforms like Zapier or Make to connect your AI workflows to your existing business stack."
+                f"1. Initial Configuration: Start by navigating to the official {tool_name} portal. Create a professional account and ensure you enable two-factor authentication for maximum security.",
+                "2. API Integration: If you are a developer, generate your API keys. Remember to store these in .env files and never commit them to public repositories.",
+                "3. Advanced Prompting: Use the 'Context-Task-Instruction' method. For example, 'Acting as a senior marketing strategist, analyze this dataset and provide a 30-day content plan.'",
+                "4. Workflow Automation: Connect your tool to Zapier or Make.com to automate repetitive tasks like email responses or data entry."
+            ]
+        })
+    elif is_africa:
+        sections.append({
+            "h2": "AI Tools Transforming the African Landscape",
+            "p": [
+                "Africa is at the forefront of the AI mobile revolution. Tools like M-Pesa's AI-driven fraud detection and Kenyan-based startups using AI for precision agriculture are setting global standards.",
+                "Local language processing models, like those from the Masakhane community, are finally breaking the language barrier, allowing AI to understand and respond in Yoruba, Swahili, and Zulu.",
+                "For African entrepreneurs, using AI for currency risk management and cross-border payment optimization is becoming a critical survival skill in volatile economic times."
+            ]
+        })
+    elif is_graphics:
+        sections.append({
+            "h2": "The Visual Revolution: AI for Designers",
+            "p": [
+                "Midjourney v6 and DALL-E 3 have completely redefined what is possible in seconds. Designers are now 'Art Directors' using AI to iterate through concepts at lightning speed.",
+                "Adobe Firefly integration within Photoshop allows for generative fill and expansion, saving hours of tedious masking and cloning work.",
+                "Canva's Magic Studio has democratized professional design, allowing small business owners to create high-end marketing materials without a five-figure budget."
+            ]
+        })
+    elif is_marketing:
+        sections.append({
+            "h2": "Marketing Automation and Growth Hacking",
+            "p": [
+                "Jasper and Copy.ai remain the industry leaders for long-form content generation that actually converts. Their ability to maintain brand voice is unparalleled.",
+                "SurferSEO and Clearscope use AI to analyze top-ranking pages in real-time, telling you exactly what keywords and structure you need to dominate Google Search.",
+                "Automated social media managers like Ocoya use AI to generate images, write captions, and schedule posts across all platforms simultaneously."
+            ]
+        })
+    elif is_dev:
+        sections.append({
+            "h2": "The 10x Developer: AI Coding Tools",
+            "p": [
+                "GitHub Copilot is now an essential part of the modern developer's IDE, predicting entire functions and handling boilerplate code with ease.",
+                "Cursor, the AI-first code editor, allows you to chat with your entire codebase, making refactoring and bug hunting significantly faster.",
+                "Tabnine provides enterprise-grade private AI models for teams that need the power of LLMs without the security risks of public data training."
+            ]
+        })
+    elif is_founder:
+        sections.append({
+            "h2": "Scale or Die: AI for Startup Founders",
+            "p": [
+                "Founders are using AI to build MVP's in weekends rather than months. Tools like Bubble with AI integration allow for rapid app development without a large dev team.",
+                "AI-driven market research tools can analyze thousands of competitor reviews and social media posts to find gap in the market in minutes.",
+                "Customer support automation using Intercom's Fin or Zendesk's AI can handle 80% of routine queries, allowing a tiny team to support thousands of users."
+            ]
+        })
+    elif is_teacher:
+        sections.append({
+            "h2": "The AI Classroom: Personalized Learning",
+            "p": [
+                "Gradescope is saving teachers hundreds of hours by using AI to assist in grading paper-based exams and coding assignments.",
+                "Quillbot and Hemingway help students improve their writing style and grammar, while AI tutors like Khan Academy's Khanmigo provide 1-on-1 support at scale.",
+                "Lesson plan generators allow teachers to create curriculum aligned with national standards in seconds, leaving more time for actual student interaction."
+            ]
+        })
+    elif is_it:
+        sections.append({
+            "h2": "Systems Mastery: AI for IT Admins",
+            "p": [
+                "Moveworks is revolutionizing the internal helpdesk by resolving IT issues through a simple chat interface, reducing ticket volumes by up to 40%.",
+                "AI-powered network monitoring tools like Darktrace can detect 'pattern deviations' that indicate a sophisticated cyber attack before it causes damage.",
+                "Automated patch management and cloud optimization tools are now using AI to predict scaling needs and prevent downtime."
+            ]
+        })
+    elif is_cyber:
+        sections.append({
+            "h2": "Sentinel AI: Next-Gen Cybersecurity",
+            "p": [
+                "Crowdstrike and SentinelOne use behavioral AI to stop malware and ransomware attacks that traditional antivirus software would miss.",
+                "Snyk uses AI to scan code for vulnerabilities in real-time, helping developers fix security flaws before the code is even deployed.",
+                "AI-driven phishing simulation and training tools are becoming the best defense against social engineering attacks, the #1 cause of data breaches."
+            ]
+        })
+    elif is_billion:
+        sections.append({
+            "h2": "AI for the Next Billion: Bridging the Gap",
+            "p": [
+                "Voice-first AI interfaces are allowing non-literate populations to access financial services and health information for the first time.",
+                "Low-bandwidth AI models are being deployed on $50 smartphones, bringing the power of GPT-4 to the most remote corners of the world.",
+                "Offline AI repositories are allowing students in areas without internet to access the sum of human knowledge."
+            ]
+        })
+    elif is_read:
+        sections.append({
+            "h2": "The Bibliophile's AI: Reading and Research",
+            "p": [
+                "Perplexity AI has become the go-to tool for researchers, providing cited, real-time answers to complex questions across the web.",
+                "Tools like Readwise and Notion's AI allow you to connect the dots between your reading highlights, resurfacing old ideas when you need them.",
+                "Elicit and Scite are using AI to analyze millions of academic papers, helping scientists find relevant research in seconds rather than days."
             ]
         })
     elif is_tools:
