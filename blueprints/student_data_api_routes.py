@@ -35,34 +35,54 @@ def get_user_progress(user_id):
 def submit_quiz(lesson_id):
     enrollment = session.get('enrollment')
     if not enrollment:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        return jsonify({'success': False, 'error': 'Not authenticated or not enrolled'}), 401
 
     data = request.get_json()
-    answer_index = data.get('answer_index')
-
-    if answer_index is None:
-        return jsonify({'success': False, 'error': 'No answer provided'}), 400
+    if not data or 'answer_index' not in data:
+        return jsonify({'success': False, 'error': 'Missing answer_index'}), 400
 
     conn = None
     try:
         conn = get_db_connection()
-        lesson_row = conn.execute("SELECT element_properties FROM lessons WHERE id = ?", (lesson_id,)).fetchone()
-        if not lesson_row:
-            return jsonify({'success': False, 'error': 'Lesson not found'}), 404
+        lesson = conn.execute('SELECT id, course_id, element_properties FROM lessons WHERE id = ? AND content_type = ?', (lesson_id, 'quiz')).fetchone()
+        if not lesson:
+            return jsonify({'success': False, 'error': 'Quiz lesson not found'}), 404
+
+        # Authorization: Check if the student's enrollment matches the lesson's course
+        enrolled_course_name = enrollment.get('course_type')
+        if not enrolled_course_name:
+            return jsonify({'success': False, 'error': 'Enrollment course type not found in session'}), 403
+
+        course_of_lesson = conn.execute('SELECT name FROM courses WHERE id = ?', (lesson['course_id'],)).fetchone()
+        if not course_of_lesson or course_of_lesson['name'] != enrolled_course_name:
+            return jsonify({'success': False, 'error': 'Not authorized to submit quiz for this course'}), 403
+
+        user_id = enrollment['user_id']
 
         import json
         try:
-            props = json.loads(lesson_row['element_properties']) if lesson_row['element_properties'] else {}
+            props = json.loads(lesson['element_properties']) if lesson['element_properties'] else {}
         except:
             props = {}
 
-        correct_index = props.get('correct_answer_index', 0)
-        is_correct = int(answer_index) == int(correct_index)
+        correct_answer_index = props.get('correct_answer_index')
+        submitted_answer_index = data['answer_index']
+
+        is_correct = (correct_answer_index is not None and int(submitted_answer_index) == int(correct_answer_index))
+        score = 100 if is_correct else 0
+
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO quiz_attempts (user_id, lesson_id, course_id, submitted_answers, is_correct, score)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (user_id, lesson_id, lesson['course_id'], json.dumps({'answer_index': submitted_answer_index}), is_correct, score))
+        conn.commit()
 
         return jsonify({
             'success': True,
             'is_correct': is_correct,
-            'correct_index': correct_index
+            'score': score,
+            'message': 'Quiz submitted successfully'
         })
     except Exception as e:
         log_error(app_logger, "Quiz submission error", error=str(e))

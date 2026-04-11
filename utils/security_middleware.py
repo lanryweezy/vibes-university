@@ -53,8 +53,8 @@ class SecurityMiddleware:
         # Content Security Policy
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
             "img-src 'self' data: https:; "
             "font-src 'self' https: data:; "
             "connect-src 'self'; "

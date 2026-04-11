@@ -11,6 +11,7 @@ from utils.security_utils import validate_email, validate_phone, sanitize_input
 from utils.auth_utils import require_teacher_auth
 # Import rate limiter
 from utils.rate_limiter import rate_limit
+from utils.file_utils import allowed_file
 
 teacher_api_bp = Blueprint('teacher_api_bp', __name__, url_prefix='/api/teacher')
 
@@ -616,8 +617,3 @@ def api_teacher_delete_lesson(lesson_id):
             return_db_connection(conn)
 
     return jsonify({'message': 'Lesson deleted'}) if deleted_rows > 0 else jsonify({'error': 'Lesson not found'}), 404
-
-# --- File handling functions ---
-def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'zip', 'rar', '7z', 'mp3', 'wav', 'aac', 'ogg'}
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
