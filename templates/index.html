@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIBES UNIVERSITY - The Last Chance to Escape Nigeria's Economic Collapse</title>
+    <meta name="description" content="Master Artificial Intelligence and build sustainable income streams. Escape the economic collapse with Vibes University's expert-led AI training programs.">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "Vibes University",
+      "url": "https://vibesuniversity.com",
+      "description": "Premium AI education for future entrepreneurs and creators.",
+      "hasCourse": [
+        {
+          "@type": "Course",
+          "name": "AI Marketing Mastery",
+          "description": "Build automated marketing systems that generate leads and sales 24/7."
+        },
+        {
+          "@type": "Course",
+          "name": "AI Coding & Development",
+          "description": "Create software and apps using AI tools without years of programming study."
+        }
+      ]
+    }
+    </script>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * {
@@ -587,17 +612,39 @@
     <!-- Header -->
     <header class="header">
         <nav class="nav container">
-            <div class="logo">VIBES UNIVERSITY</div>
+            <a href="{{ url_for('main_bp.home') }}" class="logo" style="text-decoration: none;">VIBES UNIVERSITY</a>
             <div class="nav-links">
+                <a href="{{ url_for('blog_bp.list_blogs') }}">Blog</a>
                 <a href="#courses">Courses</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#testimonials">Success Stories</a>
                 <a href="#contact">Contact</a>
-                <a href="/student/login" style="color: #ff6b35; font-weight: bold;">Student Login</a>
-                <a href="/teacher/login" style="color: #4CAF50; font-weight: bold;">Teacher Login</a>
+                <a href="{{ url_for('main_bp.student_login') }}" style="color: #ff6b35; font-weight: bold;">Student Login</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_login') }}" style="color: #4CAF50; font-weight: bold;">Teacher Login</a>
             </div>
         </nav>
     </header>
+
+    <!-- Latest Blogs Section -->
+    {% if latest_blogs %}
+    <section style="background: #111; padding: 100px 0 40px;" id="latest-blogs">
+        <div class="container">
+            <h2 style="color: #ff6b35; text-align: center; margin-bottom: 30px; text-transform: uppercase;">Latest from AI & Vibes</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;" id="blog-preview-container">
+                {% for blog in latest_blogs %}
+                <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333;">
+                    <h3 style="color: #ff6b35; margin-bottom: 10px;">{{ blog.title }}</h3>
+                    <p style="font-size: 0.9rem; color: #ccc;">{{ blog.excerpt or (blog.content | striptags | truncate(100)) }}</p>
+                    <a href="{{ url_for('blog_bp.view_blog', slug=blog.slug) }}" style="color: #ff6b35; text-decoration: none; display: inline-block; margin-top: 10px; font-weight: bold;">Read Blog →</a>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{{ url_for('blog_bp.list_blogs') }}" class="cta-button" style="padding: 10px 30px; font-size: 1rem;">View All 50+ Blogs</a>
+            </div>
+        </div>
+    </section>
+    {% endif %}
 
     <!-- Hero Section -->
     <section class="hero">
@@ -608,10 +655,10 @@
                 <h2>ESCAPE THE SYSTEM OR BE CRUSHED BY IT</h2>
                 <p>While 34.8% inflation destroys your purchasing power and 6.5% youth unemployment keeps you trapped, the smart ones are building AI-powered income streams that work 24/7. <span class="urgency-text">This is your last chance to join them.</span></p>
                 
-                <a href="/pay" class="cta-button">SECURE YOUR SPOT NOW - ₦100,000</a>
+                <a href="{{ url_for('main_bp.pay') }}" class="cta-button">SECURE YOUR SPOT NOW - ₦100,000</a>
                 <a href="#courses" class="cta-button secondary">See How Others Escaped</a>
                 <br><br>
-                <a href="/student/login" style="color: #ff6b35; text-decoration: none; font-size: 1.1rem; border-bottom: 1px solid #ff6b35; padding-bottom: 2px;">🎓 Returning Student? Login to Your Courses</a>
+                <a href="{{ url_for('main_bp.student_login') }}" style="color: #ff6b35; text-decoration: none; font-size: 1.1rem; border-bottom: 1px solid #ff6b35; padding-bottom: 2px;">🎓 Returning Student? Login to Your Courses</a>
             </div>
         </div>
     </section>
@@ -765,7 +812,7 @@
                         <li>Lifetime updates</li>
                         <li>30-day money-back guarantee</li>
                     </ul>
-                    <a href="/pay?plan=course" class="cta-button">START YOUR ESCAPE</a>
+                    <a href="{{ url_for('main_bp.pay', plan='course') }}" class="cta-button">START YOUR ESCAPE</a>
                 </div>
 
                 <div class="pricing-card featured">
@@ -782,7 +829,7 @@
                         <li>Income guarantee program</li>
                         <li>Advanced AI tools access</li>
                     </ul>
-                    <a href="/pay?plan=online" class="cta-button">GUARANTEE YOUR SUCCESS</a>
+                    <a href="{{ url_for('main_bp.pay', plan='online') }}" class="cta-button">GUARANTEE YOUR SUCCESS</a>
                 </div>
 
                 <div class="pricing-card">
@@ -799,7 +846,7 @@
                         <li>Lifetime mastermind access</li>
                         <li>₦1M income guarantee</li>
                     </ul>
-                    <a href="/pay?plan=vip" class="cta-button">JOIN THE ELITE</a>
+                    <a href="{{ url_for('main_bp.pay', plan='vip') }}" class="cta-button">JOIN THE ELITE</a>
                 </div>
             </div>
 
@@ -810,6 +857,69 @@
             </div>
         </div>
     </section>
+
+    <!-- Income Calculator Section -->
+    <section id="income-calculator" style="padding: 100px 0; background: #0f172a;">
+        <div class="container">
+            <div style="text-align: center; margin-bottom: 60px;">
+                <h2 style="font-size: 3rem; font-weight: 900; color: #ff6b35; text-transform: uppercase;">AI INCOME CALCULATOR</h2>
+                <p style="font-size: 1.25rem; color: #94a3b8; max-width: 700px; margin: 16px auto;">See how much you could be earning by leveraging AI-powered systems in the next 12 months.</p>
+            </div>
+
+            <div style="background: #1e293b; padding: 48px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.05); max-width: 900px; margin: 0 auto;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 40px;">
+                    <div>
+                        <div style="margin-bottom: 32px;">
+                            <label style="display: block; color: #ff6b35; font-weight: 700; margin-bottom: 12px; font-size: 0.9rem; text-transform: uppercase;">Hours Worked Per Day</label>
+                            <input type="range" id="calc-hours" min="1" max="12" value="2" style="width: 100%; accent-color: #ff6b35;">
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-weight: 600; color: #fff;">
+                                <span>1 Hour</span>
+                                <span id="hours-display" style="color: #ff6b35;">2 Hours</span>
+                                <span>12 Hours</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 32px;">
+                            <label style="display: block; color: #ff6b35; font-weight: 700; margin-bottom: 12px; font-size: 0.9rem; text-transform: uppercase;">AI Tools Leveraged</label>
+                            <select id="calc-tools" style="width: 100%; padding: 14px; border-radius: 12px; background: #0f172a; color: #fff; border: 1px solid rgba(255,255,255,0.1);">
+                                <option value="1">1-2 Tools (Basic)</option>
+                                <option value="2.5" selected>5+ Tools (Pro)</option>
+                                <option value="5">10+ Tools (Master)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 32px; border-radius: 24px; text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Projected Monthly Income</div>
+                        <div id="projected-income" style="font-size: 3.5rem; font-weight: 900; color: #fff; margin: 16px 0;">₦500,000</div>
+                        <div style="color: #10b981; font-weight: 600; font-size: 0.9rem;">+450% ROI compared to traditional jobs</div>
+                        <a href="#pricing" class="cta-button" style="margin-top: 24px; font-size: 0.9rem; padding: 12px 24px;">Start Building Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const hoursInput = document.getElementById('calc-hours');
+        const toolsInput = document.getElementById('calc-tools');
+        const hoursDisplay = document.getElementById('hours-display');
+        const incomeDisplay = document.getElementById('projected-income');
+
+        function calculate() {
+            const hours = parseInt(hoursInput.value);
+            const toolMultiplier = parseFloat(toolsInput.value);
+            const baseRate = 50000; // Base NGN per hour-equivalent value
+
+            const income = Math.round(hours * toolMultiplier * baseRate);
+            incomeDisplay.innerText = "₦" + income.toLocaleString();
+            hoursDisplay.innerText = hours + " Hour" + (hours > 1 ? "s" : "");
+        }
+
+        hoursInput.addEventListener('input', calculate);
+        toolsInput.addEventListener('change', calculate);
+        calculate();
+    </script>
 
     <!-- Testimonials -->
     <section class="testimonials" id="testimonials">
@@ -859,8 +969,98 @@
         </div>
     </section>
 
+    <!-- Contact Section -->
+    <section id="contact" style="padding: 100px 0; background: radial-gradient(circle at bottom left, #1e293b, #000);">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 60px; align-items: center;">
+                <div>
+                    <h2 style="font-size: 3rem; font-weight: 900; color: #ff6b35; margin-bottom: 24px;">GET IN TOUCH</h2>
+                    <p style="font-size: 1.25rem; color: #cbd5e1; margin-bottom: 40px; line-height: 1.8;">Have questions about our AI programs? Our team is ready to help you navigate your journey to financial freedom.</p>
+
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="width: 50px; height: 50px; background: rgba(255, 107, 53, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ff6b35; font-size: 1.25rem;"><i class="fas fa-envelope"></i></div>
+                            <div>
+                                <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Email Us</div>
+                                <div style="color: #fff; font-weight: 600;">escape@vibesuniversity.com</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="width: 50px; height: 50px; background: rgba(255, 107, 53, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ff6b35; font-size: 1.25rem;"><i class="fas fa-phone"></i></div>
+                            <div>
+                                <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Call Us</div>
+                                <div style="color: #fff; font-weight: 600;">+234 (0) 800-VIBES-NOW</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); padding: 48px; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <form id="contact-form">
+                        <div style="margin-bottom: 24px;">
+                            <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Full Name</label>
+                            <input type="text" name="name" required style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6); color: #fff;">
+                        </div>
+                        <div style="margin-bottom: 24px;">
+                            <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Email Address</label>
+                            <input type="email" name="email" required style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6); color: #fff;">
+                        </div>
+                        <div style="margin-bottom: 24px;">
+                            <label style="display: block; margin-bottom: 8px; color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Your Message</label>
+                            <textarea name="message" rows="4" required style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6); color: #fff;"></textarea>
+                        </div>
+                        <button type="submit" class="cta-button" style="width: 100%; margin: 0;">Send Message <i class="fas fa-paper-plane" style="margin-left: 8px;"></i></button>
+                        <div id="contact-feedback" style="margin-top: 16px; text-align: center; font-weight: 600; display: none;"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('contact-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const feedback = document.getElementById('contact-feedback');
+            const btn = this.querySelector('button');
+            const formData = new FormData(this);
+
+            btn.disabled = true;
+            btn.innerText = 'Sending...';
+
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        email: formData.get('email'),
+                        message: formData.get('message')
+                    })
+                });
+
+                const result = await response.json();
+                feedback.style.display = 'block';
+                if (result.success) {
+                    feedback.style.color = '#10b981';
+                    feedback.innerText = "Message sent successfully!";
+                    this.reset();
+                } else {
+                    feedback.style.color = '#ef4444';
+                    feedback.innerText = result.error || "Failed to send message.";
+                }
+            } catch (err) {
+                feedback.style.display = 'block';
+                feedback.style.color = '#ef4444';
+                feedback.innerText = "An error occurred.";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Send Message';
+            }
+        });
+    </script>
+
     <!-- Footer -->
-    <footer class="footer" id="contact">
+    <footer class="footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">

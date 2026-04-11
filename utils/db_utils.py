@@ -102,7 +102,9 @@ class DatabaseManager:
                 name TEXT UNIQUE NOT NULL,
                 description TEXT,
                 course_settings TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                teacher_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (teacher_id) REFERENCES users (id)
             )
         ''')
         
@@ -239,8 +241,43 @@ class DatabaseManager:
                 expires_at TIMESTAMP
             )
         ''')
+
+        # Blogs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS blogs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                slug TEXT UNIQUE NOT NULL,
+                content TEXT NOT NULL,
+                excerpt TEXT,
+                image_url TEXT,
+                author_name TEXT,
+                author_linkedin TEXT,
+                author_twitter TEXT,
+                author_ig TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Contact Messages table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                subject TEXT,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT 'unread',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
         # Add columns if they don't exist (for backward compatibility)
+        try:
+            cursor.execute('ALTER TABLE courses ADD COLUMN teacher_id INTEGER')
+        except sqlite3.OperationalError:
+            pass
+
         try:
             cursor.execute('ALTER TABLE lessons ADD COLUMN content_type TEXT DEFAULT "file"')
         except sqlite3.OperationalError:

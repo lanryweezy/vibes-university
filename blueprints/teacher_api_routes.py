@@ -7,7 +7,8 @@ import os
 from utils.db_utils import get_db_connection, return_db_connection
 from utils.logging_utils import app_logger, db_logger, security_logger, payment_logger, log_info, log_error, log_warning
 # Import security utilities
-from utils.security_utils import require_teacher_auth, validate_email, validate_phone, sanitize_input
+from utils.security_utils import validate_email, validate_phone, sanitize_input
+from utils.auth_utils import require_teacher_auth
 # Import rate limiter
 from utils.rate_limiter import rate_limit
 
@@ -30,13 +31,14 @@ def api_teacher_create_course():
     name = course_name
     description = course_description
     settings = data.get('settings', {})
+    teacher_id = session.get('teacher_id')
     
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO courses (name, description, course_settings) VALUES (?, ?, ?)',
-                      (name, description, json.dumps(settings)))
+        cursor.execute('INSERT INTO courses (name, description, course_settings, teacher_id) VALUES (?, ?, ?, ?)',
+                      (name, description, json.dumps(settings), teacher_id))
         course_id = cursor.lastrowid
         conn.commit()
         log_info(app_logger, "Course created successfully", course_id=course_id, course_name=name)
@@ -197,6 +199,39 @@ def api_teacher_update_course(course_id):
             return_db_connection(conn)
     
     return jsonify({'message': 'Course updated successfully'})
+
+@teacher_api_bp.route('/courses/<int:course_id>', methods=['DELETE'])
+def api_teacher_delete_course(course_id):
+    if not session.get('teacher_logged_in'):
+        return jsonify({'error': 'Not authorized'}), 401
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        # Check if course exists and belongs to teacher
+        existing_course = conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, session.get('teacher_id'))).fetchone()
+        if not existing_course:
+            if conn:
+                return_db_connection(conn)
+            return jsonify({'error': 'Course not found or not authorized'}), 404
+
+        # Delete related records
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM quiz_attempts WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM course_progress WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM lessons WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM modules WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        conn.commit()
+    except Exception as e:
+        if conn:
+            return_db_connection(conn)
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+    return jsonify({'message': 'Course deleted successfully'})
 
 # --- Module Management APIs ---
 @teacher_api_bp.route('/courses/<int:course_id>/modules', methods=['POST'])
