@@ -187,11 +187,12 @@ def view_earnings():
         <body>
             <aside class="sidebar">
                 <div class="logo">Vibes U</div>
-                <a href="/teacher/dashboard" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
-                <a href="/teacher/students" class="nav-link"><i class="fas fa-users"></i> Students</a>
-                <a href="/teacher/earnings" class="nav-link active"><i class="fas fa-wallet"></i> Earnings</a>
-                <a href="/teacher/course-studio" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
-                <a href="/teacher/logout" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_dashboard') }}" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+                <a href="{{ url_for('teacher_auth_bp.manage_students') }}" class="nav-link"><i class="fas fa-users"></i> Students</a>
+                <a href="{{ url_for('teacher_auth_bp.view_earnings') }}" class="nav-link active"><i class="fas fa-wallet"></i> Earnings</a>
+                <a href="{{ url_for('teacher_courses_bp.teacher_course_studio_page') }}" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
+                <a href="{{ url_for('blog_bp.list_blogs') }}" class="nav-link"><i class="fas fa-rss"></i> AI Blog</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_logout') }}" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </aside>
             <main class="main-content">
                 <h1>Financial Performance</h1>
@@ -277,10 +278,12 @@ def manage_students():
         <body>
             <aside class="sidebar">
                 <div class="logo">Vibes U</div>
-                <a href="/teacher/dashboard" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
-                <a href="/teacher/students" class="nav-link active"><i class="fas fa-users"></i> Students</a>
-                <a href="/teacher/course-studio" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
-                <a href="/teacher/logout" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_dashboard') }}" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+                <a href="{{ url_for('teacher_auth_bp.manage_students') }}" class="nav-link active"><i class="fas fa-users"></i> Students</a>
+                <a href="{{ url_for('teacher_auth_bp.view_earnings') }}" class="nav-link"><i class="fas fa-wallet"></i> Earnings</a>
+                <a href="{{ url_for('teacher_courses_bp.teacher_course_studio_page') }}" class="nav-link"><i class="fas fa-rocket"></i> Course Studio</a>
+                <a href="{{ url_for('blog_bp.list_blogs') }}" class="nav-link"><i class="fas fa-rss"></i> AI Blog</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_logout') }}" class="nav-link" style="margin-top:auto; color:#ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </aside>
             <main class="main-content">
                 <h1>Student Management</h1>

@@ -219,9 +219,22 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Header -->
+    <header style="position: fixed; top: 0; width: 100%; background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(10px); z-index: 1000; padding: 15px 0; border-bottom: 2px solid #ff6b35;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; max-width: 1200px; margin: 0 auto;">
+            <a href="{{ url_for('main_bp.home') }}" style="font-size: 28px; font-weight: bold; color: #ff6b35; text-transform: uppercase; letter-spacing: 2px; text-decoration: none;">VIBES UNIVERSITY</a>
+            <div style="display: flex; gap: 30px;">
+                <a href="{{ url_for('blog_bp.list_blogs') }}" style="color: #ff6b35; text-decoration: none; font-weight: 600;">Blog</a>
+                <a href="{{ url_for('main_bp.home') }}#courses" style="color: #ffffff; text-decoration: none; font-weight: 600;">Courses</a>
+                <a href="{{ url_for('main_bp.home') }}#pricing" style="color: #ffffff; text-decoration: none; font-weight: 600;">Pricing</a>
+                <a href="{{ url_for('main_bp.student_login') }}" style="color: #ff6b35; font-weight: bold; text-decoration: none;">Student Login</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" style="margin-top: 100px;">
         <nav>
-            <a href="/blogs" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+            <a href="{{ url_for('blog_bp.list_blogs') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
         </nav>
 
         <header>

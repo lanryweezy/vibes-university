@@ -612,15 +612,15 @@
     <!-- Header -->
     <header class="header">
         <nav class="nav container">
-            <div class="logo">VIBES UNIVERSITY</div>
+            <a href="{{ url_for('main_bp.home') }}" class="logo" style="text-decoration: none;">VIBES UNIVERSITY</a>
             <div class="nav-links">
-                <a href="/blogs">Blog</a>
+                <a href="{{ url_for('blog_bp.list_blogs') }}">Blog</a>
                 <a href="#courses">Courses</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#testimonials">Success Stories</a>
                 <a href="#contact">Contact</a>
-                <a href="/student/login" style="color: #ff6b35; font-weight: bold;">Student Login</a>
-                <a href="/teacher/login" style="color: #4CAF50; font-weight: bold;">Teacher Login</a>
+                <a href="{{ url_for('main_bp.student_login') }}" style="color: #ff6b35; font-weight: bold;">Student Login</a>
+                <a href="{{ url_for('teacher_auth_bp.teacher_login') }}" style="color: #4CAF50; font-weight: bold;">Teacher Login</a>
             </div>
         </nav>
     </header>
@@ -635,12 +635,12 @@
                 <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333;">
                     <h3 style="color: #ff6b35; margin-bottom: 10px;">{{ blog.title }}</h3>
                     <p style="font-size: 0.9rem; color: #ccc;">{{ blog.excerpt or (blog.content | striptags | truncate(100)) }}</p>
-                    <a href="/blog/{{ blog.slug }}" style="color: #ff6b35; text-decoration: none; display: inline-block; margin-top: 10px; font-weight: bold;">Read Blog →</a>
+                    <a href="{{ url_for('blog_bp.view_blog', slug=blog.slug) }}" style="color: #ff6b35; text-decoration: none; display: inline-block; margin-top: 10px; font-weight: bold;">Read Blog →</a>
                 </div>
                 {% endfor %}
             </div>
             <div style="text-align: center; margin-top: 30px;">
-                <a href="/blogs" class="cta-button" style="padding: 10px 30px; font-size: 1rem;">View All 50+ Blogs</a>
+                <a href="{{ url_for('blog_bp.list_blogs') }}" class="cta-button" style="padding: 10px 30px; font-size: 1rem;">View All 50+ Blogs</a>
             </div>
         </div>
     </section>
@@ -655,10 +655,10 @@
                 <h2>ESCAPE THE SYSTEM OR BE CRUSHED BY IT</h2>
                 <p>While 34.8% inflation destroys your purchasing power and 6.5% youth unemployment keeps you trapped, the smart ones are building AI-powered income streams that work 24/7. <span class="urgency-text">This is your last chance to join them.</span></p>
                 
-                <a href="/pay" class="cta-button">SECURE YOUR SPOT NOW - ₦100,000</a>
+                <a href="{{ url_for('main_bp.pay') }}" class="cta-button">SECURE YOUR SPOT NOW - ₦100,000</a>
                 <a href="#courses" class="cta-button secondary">See How Others Escaped</a>
                 <br><br>
-                <a href="/student/login" style="color: #ff6b35; text-decoration: none; font-size: 1.1rem; border-bottom: 1px solid #ff6b35; padding-bottom: 2px;">🎓 Returning Student? Login to Your Courses</a>
+                <a href="{{ url_for('main_bp.student_login') }}" style="color: #ff6b35; text-decoration: none; font-size: 1.1rem; border-bottom: 1px solid #ff6b35; padding-bottom: 2px;">🎓 Returning Student? Login to Your Courses</a>
             </div>
         </div>
     </section>
@@ -812,7 +812,7 @@
                         <li>Lifetime updates</li>
                         <li>30-day money-back guarantee</li>
                     </ul>
-                    <a href="/pay?plan=course" class="cta-button">START YOUR ESCAPE</a>
+                    <a href="{{ url_for('main_bp.pay', plan='course') }}" class="cta-button">START YOUR ESCAPE</a>
                 </div>
 
                 <div class="pricing-card featured">
@@ -829,7 +829,7 @@
                         <li>Income guarantee program</li>
                         <li>Advanced AI tools access</li>
                     </ul>
-                    <a href="/pay?plan=online" class="cta-button">GUARANTEE YOUR SUCCESS</a>
+                    <a href="{{ url_for('main_bp.pay', plan='online') }}" class="cta-button">GUARANTEE YOUR SUCCESS</a>
                 </div>
 
                 <div class="pricing-card">
@@ -846,7 +846,7 @@
                         <li>Lifetime mastermind access</li>
                         <li>₦1M income guarantee</li>
                     </ul>
-                    <a href="/pay?plan=vip" class="cta-button">JOIN THE ELITE</a>
+                    <a href="{{ url_for('main_bp.pay', plan='vip') }}" class="cta-button">JOIN THE ELITE</a>
                 </div>
             </div>
 
