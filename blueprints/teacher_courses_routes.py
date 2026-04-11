@@ -1,19 +1,3 @@
-from flask import Blueprint, render_template, render_template_string, redirect, url_for, session, request, jsonify
-import sqlite3
-import json
-import os
-from datetime import datetime
-from functools import wraps
-
-# Import utilities
-from utils.db_utils import get_db_connection, return_db_connection
-from utils.logging_utils import app_logger, db_logger, log_info, log_error, log_warning
-from utils.security_utils import sanitize_input
-from utils.security_middleware import csrf_protect
-from utils.auth_utils import require_teacher_auth
-
-teacher_courses_bp = Blueprint('teacher_courses_bp', __name__, url_prefix='/teacher')
-
 @teacher_courses_bp.route('/lessons/<int:lesson_id>/delete', methods=['POST'])
 @require_teacher_auth
 @csrf_protect
@@ -45,10 +29,11 @@ def delete_lesson(lesson_id):
         if conn:
             return_db_connection(conn)
 
+
 @teacher_courses_bp.route('/course-studio')
 @require_teacher_auth
 def teacher_course_studio_page():
-    """Teacher course design studio."""
+    """Teacher course design studio - same interface as admin but with teacher permissions."""
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
@@ -520,7 +505,6 @@ def teacher_course_studio_page():
             });
 
             const mainCanvas = document.getElementById('course-canvas-main');
-            const propertiesEditorEl = document.getElementById('properties-editor');
 
             propertiesEditorEl.addEventListener('click', function(event) {
                 if (event.target.classList.contains('clear-file-btn')) {
@@ -556,6 +540,8 @@ def teacher_course_studio_page():
                      else if(label && label.textContent.includes('Current')) label.textContent = label.textContent.replace('Current', 'Upload');
 
 
+                } else if (event.target.classList.contains('edit-module-btn')) {
+                     // Edit module buttons are on the canvas, not in properties editor. This part can be removed.
                 }
             });
 
@@ -718,14 +704,14 @@ def teacher_course_studio_page():
                 const lessonsInFirstModule = currentCourseData.lessons ? currentCourseData.lessons.filter(l => l.module_id === firstModuleId) : [];
                 const defaultOrderIndex = lessonsInFirstModule.length + 1;
 
-                const formHTML = `<form id="add-lesson-element-modal-form" style="display:flex;flex-direction:column;gap:10px;">
-                    <input type="hidden" name="content_type" value="${elementType}">
-                    <div class="form-group"><label for="modal-lesson-title">Lesson Title:</label><input type="text" id="modal-lesson-title" name="lesson_title" value="${defaultTitle}" r style="width:98%;"></div>
-                    <div class="form-group"><label for="modal-lesson-module">Parent Module:</label><select id="modal-lesson-module" name="module_id" r style="width:98%;">${moduleOptionsHTML}</select></div>
-                    <div class="form-group"><label for="modal-lesson-order">Order Index:</label><input type="number" id="modal-lesson-order" name="order_index" value="${defaultOrderIndex}" min="1" r style="width:98%;"></div>
-                    ${typeSpecificFields}
+                const formHTML = \`<form id="add-lesson-element-modal-form" style="display:flex;flex-direction:column;gap:10px;">
+                    <input type="hidden" name="content_type" value="\${elementType}">
+                    <div class="form-group"><label for="modal-lesson-title">Lesson Title:</label><input type="text" id="modal-lesson-title" name="lesson_title" value="\${defaultTitle}" r style="width:98%;"></div>
+                    <div class="form-group"><label for="modal-lesson-module">Parent Module:</label><select id="modal-lesson-module" name="module_id" r style="width:98%;">\${moduleOptionsHTML}</select></div>
+                    <div class="form-group"><label for="modal-lesson-order">Order Index:</label><input type="number" id="modal-lesson-order" name="order_index" value="\${defaultOrderIndex}" min="1" r style="width:98%;"></div>
+                    \${typeSpecificFields}
                     <button type="submit" class="btn-primary" style="width:100%;">Add Lesson Element</button>
-                </form>`;
+                </form>\`;
 
                 const submitNewLessonElement = async (formData, closeModalCallback) => {
                     if (!selectedCourseId) { alert("Error: No course selected."); return; }
@@ -745,7 +731,7 @@ def teacher_course_studio_page():
                     formData.append('element_properties', JSON.stringify(elementProps));
 
                     try {
-                        const response = await fetch(`/api/teacher/courses/${selectedCourseId}/lessons`, {
+                        const response = await fetch(\`/api/teacher/courses/\${selectedCourseId}/lessons\`, {
                             method: 'POST',
                             body: formData
                         });
@@ -775,7 +761,7 @@ def teacher_course_studio_page():
             }
 
             function handleEditModuleClick(moduleId, name, description, orderIndex) {
-                const formHTML = `<form id="edit-module-modal-form" style="display:flex;flex-direction:column;gap:10px;"><input type="hidden" name="module_id" value="${moduleId}"><div class="form-group"><label for="modal-edit-module-name">Name:</label><input type="text" id="modal-edit-module-name" name="name" value="${name}" r style="width:98%;"></div><div class="form-group"><label for="modal-edit-module-description">Description:</label><textarea id="modal-edit-module-description" name="description" rows="3" style="width:98%;">${description}</textarea></div><div class="form-group"><label for="modal-edit-module-order">Order:</label><input type="number" id="modal-edit-module-order" name="order_index" value="${orderIndex}" min="1" r style="width:98%;"></div><button type="submit" class="btn-primary" style="width:100%;">Update Module</button></form>`;
+                const formHTML = \`<form id="edit-module-modal-form" style="display:flex;flex-direction:column;gap:10px;"><input type="hidden" name="module_id" value="\${moduleId}"><div class="form-group"><label for="modal-edit-module-name">Name:</label><input type="text" id="modal-edit-module-name" name="name" value="\${name}" r style="width:98%;"></div><div class="form-group"><label for="modal-edit-module-description">Description:</label><textarea id="modal-edit-module-description" name="description" rows="3" style="width:98%;">\${description}</textarea></div><div class="form-group"><label for="modal-edit-module-order">Order:</label><input type="number" id="modal-edit-module-order" name="order_index" value="\${orderIndex}" min="1" r style="width:98%;"></div><button type="submit" class="btn-primary" style="width:100%;">Update Module</button></form>\`;
                 const submitEditModule = async (formData, closeModalCallback) => {
                     const mId=formData.get('module_id'), uName=formData.get('name'), uDesc=formData.get('description'), uOrder=parseInt(formData.get('order_index'));
                     try {
@@ -783,9 +769,9 @@ def teacher_course_studio_page():
                         if(!response.ok)throw new Error((await response.json()).error||'Failed to update');
                         alert('Module updated!'); if(currentCourseData){const cName=currentCourseData.id===selectedCourseId?currentCourseData.name:document.querySelector(`#course-list li[data-course-id='${selectedCourseId}']`).textContent;loadCourse(selectedCourseId,cName);}
                         if(closeModalCallback)closeModalCallback();
-                    } catch(error){console.error("Failed to update module:",error);alert(\`Error: \${error.message}\`);}
+                    } catch(error){console.error("Failed to update module:",error);alert(`Error: ${error.message}`);}
                 };
-                openModal(\`Edit Module: \${name}\`, formHTML, submitEditModule);
+                openModal(`Edit Module: ${name}`, formHTML, submitEditModule);
             }
 
         </script>
