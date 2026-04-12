@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics - Vibes University</title>
+    <style>
+        body{font-family:'Inter', sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}
+        .header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}
+        h1{color:#ff6b35;margin:0;}
+        .back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}
+        .section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}
+        h3{color:#ff6b35;margin-top:0;}
+        .table{width:100%;border-collapse:collapse;margin-top:15px;}
+        .table th,.table td{padding:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}
+        .table th{background:#0f172a;color:#94a3b8;}
+        .table tr:hover{background:rgba(255,255,255,0.02);}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Analytics Dashboard</h1>
+        <a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a>
+    </div>
+    <div class="section">
+        <h3>💰 Monthly Revenue</h3>
+        <table class="table">
+            <tr><th>Month</th><th>Revenue</th><th>Enrollments</th></tr>
+            {% for r in monthly_revenue %}
+            <tr>
+                <td>{{r.month}}</td>
+                <td>₦{{ "{:,}".format(r.revenue or 0) }}</td>
+                <td>{{r.enrollments}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="section">
+        <h3>🎯 Course Performance</h3>
+        <table class="table">
+            <tr><th>Course</th><th>Total</th><th>Completed</th><th>Revenue</th></tr>
+            {% for c_perf in course_performance %}
+            <tr>
+                <td>{{c_perf.course_type|title}}</td>
+                <td>{{c_perf.total_enrollments}}</td>
+                <td>{{c_perf.completed_enrollments}}</td>
+                <td>₦{{ "{:,}".format(c_perf.revenue or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

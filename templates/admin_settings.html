@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings - Vibes University</title>
+    <style>
+        body{font-family:'Inter', sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}
+        .header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}
+        h1{color:#ff6b35;margin:0;}
+        .back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}
+        .section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}
+        h3{color:#ff6b35;margin-top:0;}
+        .form-group{margin-bottom:15px;}
+        .form-group label{display:block;margin-bottom:5px;color:#94a3b8;}
+        .form-group input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;}
+        .save-btn{background:#10b981;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+        .success-msg{background:#10b981;color:white;padding:10px;border-radius:8px;margin-bottom:20px;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚙️ System Settings</h1>
+        <a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a>
+    </div>
+    {% if message %}
+    <div class="success-msg">{{message}}</div>
+    {% endif %}
+    <div class="section">
+        <h3>🔐 Security Settings</h3>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+            <div class="form-group">
+                <label>New Admin Password:</label>
+                <input type="password" name="new_password" placeholder="Enter new admin password">
+            </div>
+            <button type="submit" class="save-btn">💾 Save Changes</button>
+        </form>
+    </div>
+</body>
+</html>

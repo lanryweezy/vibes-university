@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login - Vibes University</title>
+    <style>
+        body{background:#0f172a;color:#fff;font-family:'Inter', sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}
+        .card{background:#1e293b;padding:40px;border-radius:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);width:350px;border:1px solid rgba(255,255,255,0.05);}
+        h2{color:#ff6b35;text-align:center;margin-bottom:30px;}
+        input{width:100%;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;margin-bottom:20px;}
+        button{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;font-weight:bold;cursor:pointer;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Admin Secure Access</h2>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+            <input type="password" name="password" placeholder="Admin Password" required>
+            <button type="submit">Unlock Dashboard</button>
+        </form>
+        {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
+    </div>
+</body>
+</html>

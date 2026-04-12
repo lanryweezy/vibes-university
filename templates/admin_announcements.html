@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Announcements - Vibes University</title>
+    <style>
+        body{font-family:'Inter', sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}
+        .header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}
+        h1{color:#ff6b35;margin:0;}
+        .back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}
+        .section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}
+        .form-group{margin-bottom:15px;}
+        .form-group label{display:block;margin-bottom:5px;}
+        .form-group input, .form-group textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;}
+        .btn{background:#ff6b35;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+        .success-msg{background:#10b981;color:white;padding:10px;border-radius:8px;margin-bottom:20px;}
+        .table{width:100%;border-collapse:collapse;margin-top:15px;}
+        .table th,.table td{padding:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}
+        .table th{background:#0f172a;color:#94a3b8;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📢 Announcements</h1>
+        <a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a>
+    </div>
+    {% if message %}
+    <div class="success-msg">{{message}}</div>
+    {% endif %}
+    <div class="section">
+        <h3>New Announcement</h3>
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+            <div class="form-group">
+                <label>Title:</label>
+                <input type="text" name="title" required>
+            </div>
+            <div class="form-group">
+                <label>Message:</label>
+                <textarea name="message_content" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn">Post Announcement</button>
+        </form>
+    </div>
+    <div class="section">
+        <h3>Existing Announcements</h3>
+        <table class="table">
+            <tr><th>Title</th><th>Message</th><th>Date</th></tr>
+            {% for ann in anns %}
+            <tr>
+                <td>{{ann.title}}</td>
+                <td>{{ann.message}}</td>
+                <td>{{ann.created_at.split(' ')[0]}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

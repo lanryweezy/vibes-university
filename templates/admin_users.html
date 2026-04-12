@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Management - Vibes University</title>
+    <style>
+        body{font-family:'Inter', sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}
+        .header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}
+        h1{color:#ff6b35;margin:0;}
+        .back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}
+        .table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden;}
+        .table th,.table td{padding:15px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}
+        .table th{background:#0f172a;color:#94a3b8;font-weight:bold;}
+        .table tr:hover{background:rgba(255,255,255,0.02);}
+        .status-active{color:#10b981;}
+        .status-inactive{color:#ef4444;}
+        .user-email{color:#ff6b35;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👥 User Management</h1>
+        <a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a>
+    </div>
+    <table class="table">
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Enrollments</th>
+            <th>Completed</th>
+            <th>Total Spent</th>
+            <th>Joined</th>
+            <th>Status</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{user['full_name']}}</td>
+            <td class="user-email">{{user['email']}}</td>
+            <td>{{user['phone']}}</td>
+            <td>{{user['enrollment_count']}}</td>
+            <td>{{user['completed_enrollments']}}</td>
+            <td>₦{{ "{:,}".format(user['total_spent'] or 0) }}</td>
+            <td>{{user['created_at'].split(' ')[0]}}</td>
+            <td class="{{'status-active' if user['is_active'] else 'status-inactive'}}">{{'Active' if user['is_active'] else 'Inactive'}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
