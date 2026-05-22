@@ -113,6 +113,8 @@ ENV/
 
 # Database
 vibes_university.db
+vibes_university.db-shm
+vibes_university.db-wal
 
 # Static course uploads (large files, keep only test/sample)
 static/courses/**/*.pdf

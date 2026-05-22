@@ -8,15 +8,17 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article">
+    <meta property="og:url" content="{{ url_for('blog_bp.view_blog', slug=blog.slug, _external=True) }}">
     <meta property="og:title" content="{{ blog.title }}">
     <meta property="og:description" content="{{ blog.excerpt or (blog.content | striptags | truncate(160)) }}">
-    <meta property="og:image" content="{{ blog.image_url }}">
+    <meta property="og:image" content="{{ blog.image_url or url_for('static', filename='images/og-main.png', _external=True) }}">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ url_for('blog_bp.view_blog', slug=blog.slug, _external=True) }}">
     <meta property="twitter:title" content="{{ blog.title }}">
     <meta property="twitter:description" content="{{ blog.excerpt or (blog.content | striptags | truncate(160)) }}">
-    <meta property="twitter:image" content="{{ blog.image_url }}">
+    <meta property="twitter:image" content="{{ blog.image_url or url_for('static', filename='images/og-main.png', _external=True) }}">
 
     <!-- Structured Data -->
     <script type="application/ld+json">

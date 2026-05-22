@@ -1,0 +1,137 @@
+{% extends "student_base.html" %}
+
+{% block title %}My Courses | Vibes University{% endblock %}
+
+{% block extra_css %}
+        .header-card {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(15, 23, 42, 0) 100%);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            margin-bottom: 48px;
+        }
+
+        h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; margin: 0 0 12px 0; }
+        .course-badge { background: var(--primary); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; }
+
+        .progress-container { margin-top: 32px; }
+        .progress-info { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; font-size: 0.9rem; }
+        .progress-bar { height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 5px; transition: width 0.5s ease; }
+
+        /* Modules */
+        .module-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 32px;
+            overflow: hidden;
+        }
+
+        .module-header {
+            padding: 24px 32px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .module-title { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+
+        .lesson-item {
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.3s;
+        }
+
+        .lesson-item:last-child { border-bottom: none; }
+        .lesson-item:hover { background: rgba(255, 255, 255, 0.02); }
+
+        .lesson-status { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .completed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .pending { background: rgba(255, 107, 53, 0.1); color: var(--primary); }
+
+        .lesson-info { flex-grow: 1; }
+        .lesson-name { font-weight: 600; font-size: 1.05rem; margin-bottom: 4px; color: #fff; text-decoration: none; display: block; }
+        .lesson-name:hover { color: var(--primary); }
+        .lesson-meta { font-size: 0.85rem; color: var(--text-muted); }
+
+        .action-btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .btn-start { background: var(--primary); color: #fff; }
+        .btn-start:hover { background: var(--primary-light); transform: translateY(-2px); }
+        .btn-completed { background: rgba(16, 185, 129, 0.1); color: var(--success); cursor: default; }
+{% endblock %}
+
+{% block content %}
+        <div class="header-card">
+            <span class="course-badge">Enrolled</span>
+            <h1>{{ enrollment['course_type']|title }}</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">Welcome back, <strong>{{ enrollment['full_name'] }}</strong>! Continue your journey to AI mastery.</p>
+
+            <div class="progress-container">
+                <div class="progress-info">
+                    <span>Course Progress</span>
+                    <span>{{ overall_progress_percent }}% Complete</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ overall_progress_percent }}%;"></div>
+                </div>
+                <div style="margin-top: 12px; color: var(--text-muted); font-size: 0.85rem;">
+                    {{ completed_count_for_this_course }} of {{ total_lessons_for_this_course }} lessons mastered
+                </div>
+            </div>
+        </div>
+
+        {% for module_name, module_lessons in modules.items() %}
+        <div class="module-card">
+            <div class="module-header">
+                <div class="module-title">{{ module_name }}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">{{ module_lessons|length }} Lessons</div>
+            </div>
+            <div class="lessons-container">
+                {% for lesson in module_lessons %}
+                {% set progress_key = (course_details.id if course_details else '') ~ '_' ~ lesson.id|string %}
+                {% set is_completed = progress_lookup.get(progress_key, False) %}
+                <div class="lesson-item">
+                    <div class="lesson-status {{ 'completed' if is_completed else 'pending' }}">
+                        <i class="fas {{ 'fa-check' if is_completed else 'fa-play' }}"></i>
+                    </div>
+                    <div class="lesson-info">
+                        <a href="{{ url_for('student_content_bp.view_lesson', lesson_id=lesson.id) }}" class="lesson-name">
+                            {{ get_file_icon((lesson.file_path or '').split('/')[-1]) }} {{ lesson.lesson }}
+                        </a>
+                        <div class="lesson-meta">
+                            {% if lesson.content_type == 'video' %}<i class="fas fa-video"></i> Video Lesson{% elif lesson.content_type == 'quiz' %}<i class="fas fa-tasks"></i> Interactive Quiz{% else %}<i class="fas fa-file-alt"></i> Reading Material{% endif %}
+                        </div>
+                    </div>
+                    {% if is_completed %}
+                    <span class="action-btn btn-completed">Mastered</span>
+                    {% else %}
+                    <a href="{{ url_for('student_content_bp.view_lesson', lesson_id=lesson.id) }}" class="action-btn btn-start">Start Lesson</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not modules %}
+        <div style="text-align: center; padding: 80px; background: var(--card-bg); border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.1);">
+            <i class="fas fa-hourglass-start fa-3x" style="color: var(--primary); margin-bottom: 24px;"></i>
+            <h3>Curriculum Under Construction</h3>
+            <p style="color: var(--text-muted);">We are currently preparing your elite AI curriculum. Check back shortly!</p>
+        </div>
+        {% endif %}
+{% endblock %}
