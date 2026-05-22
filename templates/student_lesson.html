@@ -152,14 +152,12 @@
             });
         }
 
-        // Auto-mark logic
         document.querySelectorAll('video').forEach(v => v.addEventListener('ended', markCompleted));
         document.querySelectorAll('.download-btn').forEach(b => b.addEventListener('click', markCompleted));
         {% if lesson['content_type'] in ['markdown', 'text'] %}
-        setTimeout(markCompleted, 30000); // Mark as complete after 30 seconds of reading
+        setTimeout(markCompleted, 30000);
         {% endif %}
 
-        // Quiz interactions
         {% if lesson['content_type'] == 'quiz' %}
         document.querySelectorAll('.quiz-option').forEach(opt => {
             opt.addEventListener('click', function() {
