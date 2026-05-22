@@ -210,19 +210,10 @@ def pay():
                 if conn:
                     return_db_connection(conn)
 
-    return render_template_string('''
-    <html><head><title>Vibes University - Payment</title>
-    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.msg{color:#f44336;margin-top:20px;text-align:center;}</style></head>
-    <body><div class="container"><h2>Secure Your Spot</h2><form method="post">
-    <label for="plan">Select Plan</label><select name="plan" id="plan">
-    {% for key, p_item in plans.items() %}<option value="{{key}}" {% if key == selected_plan_key %}selected{% endif %}>{{p_item.name}} (₦{{p_item.price}})</option>{% endfor %}
-    </select><label for="name">Full Name</label><input type="text" name="name" id="name" required>
-    <label for="email">Email</label><input type="email" name="email" id="email" required>
-    <label for="phone">Phone</label><input type="text" name="phone" id="phone" required>
-    <button class="btn" type="submit">Proceed to Payment (Demo)</button></form>
-    {% if message %}<div class="msg">{{message}}</div>{% endif %}
-    </div></body></html>
-    ''', plans=plans, selected_plan_key=selected_plan_key, message=message)
+    return render_template('payment.html',
+                           plans=plans,
+                           selected_plan_key=selected_plan_key,
+                           message=message)
 
 @main_bp.route('/demo-payment', methods=['GET', 'POST'])
 @csrf_protect
@@ -236,26 +227,16 @@ def demo_payment():
         # Validate email format
         if not validate_email(email):
             csrf_token = generate_csrf_token()
-            return render_template_string('''
-            <html><head><title>Demo Payment - Vibes University</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.demo-notice{background:#333;color:#ff6b35;padding:15px;border-radius:8px;margin-top:20px;text-align:center;border:1px solid #ff6b35;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;margin:10px 0;}</style></head>
-            <body><div class="container"><h2>🎯 Demo Payment</h2><div class="demo-notice"><strong>Testing Mode:</strong> Creates a demo enrollment and redirects to dashboard.</div>
-            <div class="error">Invalid email format. Please try again.</div>
-            <form method="post"><input type="hidden" name="csrf_token" value="{{csrf_token}}"><label for="plan">Select Plan</label><select name="plan" id="plan"><option value="course">Course Access (₦100,000)</option><option value="online">Online Mentorship (₦400,000)</option><option value="vip">VIP Physical Class (₦2,000,000)</option></select>
-            <label for="name">Full Name</label><input type="text" name="name" id="name" required><label for="email">Email</label><input type="email" name="email" id="email" required><label for="phone">Phone</label><input type="text" name="phone" id="phone" required>
-            <button class="btn" type="submit">🚀 Access Student Dashboard</button></form></div></body></html>
-            ''', csrf_token=csrf_token)
+            return render_template('demo_payment.html',
+                                   csrf_token=csrf_token,
+                                   error="Invalid email format. Please try again.")
         
         # Validate phone format
         if not validate_phone(phone):
             csrf_token = generate_csrf_token()
-            return render_template_string('''
-            <html><head><title>Demo Payment - Vibes University</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.demo-notice{background:#333;color:#ff6b35;padding:15px;border-radius:8px;margin-top:20px;text-align:center;border:1px solid #ff6b35;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;margin:10px 0;}</style></head>
-            <body><div class="container"><h2>🎯 Demo Payment</h2><div class="demo-notice"><strong>Testing Mode:</strong> Creates a demo enrollment and redirects to dashboard.</div>
-            <div class="error">Invalid phone number format. Please try again.</div>
-            <form method="post"><input type="hidden" name="csrf_token" value="{{csrf_token}}"><label for="plan">Select Plan</label><select name="plan" id="plan"><option value="course">Course Access (₦100,000)</option><option value="online">Online Mentorship (₦400,000)</option><option value="vip">VIP Physical Class (₦2,000,000)</option></select>
-            <label for="name">Full Name</label><input type="text" name="name" id="name" required><label for="email">Email</label><input type="email" name="email" id="email" required><label for="phone">Phone</label><input type="text" name="phone" id="phone" required>
-            <button class="btn" type="submit">🚀 Access Student Dashboard</button></form></div></body></html>
-            ''', csrf_token=csrf_token)
+            return render_template('demo_payment.html',
+                                   csrf_token=csrf_token,
+                                   error="Invalid phone number format. Please try again.")
         
         log_info(payment_logger, "Demo payment initiated", email=email, plan=plan_key)
         
@@ -300,10 +281,4 @@ def demo_payment():
         return redirect(url_for('main_bp.dashboard'))
     
     csrf_token = generate_csrf_token()
-    return render_template_string('''
-    <html><head><title>Demo Payment - Vibes University</title><style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.demo-notice{background:#333;color:#ff6b35;padding:15px;border-radius:8px;margin-top:20px;text-align:center;border:1px solid #ff6b35;}</style></head>
-    <body><div class="container"><h2>🎯 Demo Payment</h2><div class="demo-notice"><strong>Testing Mode:</strong> Creates a demo enrollment and redirects to dashboard.</div>
-    <form method="post"><input type="hidden" name="csrf_token" value="{{csrf_token}}"><label for="plan">Select Plan</label><select name="plan" id="plan"><option value="course">Course Access (₦100,000)</option><option value="online">Online Mentorship (₦400,000)</option><option value="vip">VIP Physical Class (₦2,000,000)</option></select>
-    <label for="name">Full Name</label><input type="text" name="name" id="name" required><label for="email">Email</label><input type="email" name="email" id="email" required><label for="phone">Phone</label><input type="text" name="phone" id="phone" required>
-    <button class="btn" type="submit">🚀 Access Student Dashboard</button></form></div></body></html>
-    ''', csrf_token=csrf_token)
+    return render_template('demo_payment.html', csrf_token=csrf_token)
