@@ -288,6 +288,11 @@ class DatabaseManager:
         except sqlite3.OperationalError:
             pass
         
+        # Add performance indexes for frequently queried foreign keys
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_lessons_course_id ON lessons(course_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_lessons_module_id ON lessons(module_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments(user_id)')
+
         conn.commit()
         conn.close()
 
