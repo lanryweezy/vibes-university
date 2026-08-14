@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, session
+from werkzeug.utils import secure_filename
 import sqlite3
 import json
 import os
@@ -380,7 +381,7 @@ def api_teacher_create_lesson_in_course(course_id):
             if file.filename != '':
                 if allowed_file(file.filename):
                     # Save file with course_id/module_id prefix
-                    filename = f"{course_id}_{module_id}_{file.filename}"
+                    filename = f"{course_id}_{module_id}_{secure_filename(file.filename)}"
                     file_path = os.path.join('uploads', filename)
                     os.makedirs('uploads', exist_ok=True)
                     file.save(file_path)
@@ -521,7 +522,7 @@ def api_teacher_update_lesson(lesson_id):
             if file.filename != '':
                 if allowed_file(file.filename):
                     # Save file with course_id/module_id prefix
-                    filename = f"{course_id}_{existing_lesson['module_id']}_{file.filename}"
+                    filename = f"{course_id}_{existing_lesson['module_id']}_{secure_filename(file.filename)}"
                     file_path = os.path.join('uploads', filename)
                     os.makedirs('uploads', exist_ok=True)
                     file.save(file_path)
