@@ -269,13 +269,13 @@
                 <p>Sulaiman is a leading AI researcher and entrepreneur focused on leveraging technology for socio-economic growth in Africa and beyond. Follow his journey as he builds the future with AI and Vibes.</p>
                 <div class="social-grid">
                     {% if blog.author_twitter %}
-                    <a href="https://twitter.com/{{ blog.author_twitter.replace('@', '') }}" target="_blank" title="Follow on Twitter"><i class="fab fa-x-twitter"></i></a>
+                    <a href="https://twitter.com/{{ blog.author_twitter.replace('@', '') }}" target="_blank" title="Follow on Twitter" aria-label="Follow on Twitter"><i class="fab fa-x-twitter"></i></a>
                     {% endif %}
                     {% if blog.author_ig %}
-                    <a href="https://instagram.com/{{ blog.author_ig }}" target="_blank" title="Follow on Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://instagram.com/{{ blog.author_ig }}" target="_blank" title="Follow on Instagram" aria-label="Follow on Instagram"><i class="fab fa-instagram"></i></a>
                     {% endif %}
-                    <a href="{{ blog.author_linkedin }}" target="_blank" title="Connect on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="https://github.com/lanryweezy" target="_blank" title="View Github"><i class="fab fa-github"></i></a>
+                    <a href="{{ blog.author_linkedin }}" target="_blank" title="Connect on LinkedIn" aria-label="Connect on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="https://github.com/lanryweezy" target="_blank" title="View Github" aria-label="View Github"><i class="fab fa-github"></i></a>
                 </div>
             </div>
         </section>
