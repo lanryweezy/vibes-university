@@ -62,9 +62,8 @@ def api_admin_create_course():
     return jsonify({'message': 'Course created successfully', 'course_id': course_id}), 201
 
 @admin_api_bp.route('/courses', methods=['GET'])
+@require_admin_auth
 def api_admin_get_courses():
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     conn = None
     try:
@@ -90,9 +89,8 @@ def api_admin_get_courses():
     return jsonify(courses)
 
 @admin_api_bp.route('/courses/<int:course_id>', methods=['GET'])
+@require_admin_auth
 def api_admin_get_course(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     conn = None
     try:
@@ -144,9 +142,8 @@ def api_admin_get_course(course_id):
     return jsonify(course)
 
 @admin_api_bp.route('/courses/<int:course_id>', methods=['PUT'])
+@require_admin_auth
 def api_admin_update_course(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     data = request.get_json()
     if not data:
@@ -204,9 +201,8 @@ def api_admin_update_course(course_id):
     return jsonify({'message': 'Course updated successfully'})
 
 @admin_api_bp.route('/courses/<int:course_id>', methods=['DELETE'])
+@require_admin_auth
 def api_admin_delete_course(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     conn = None
     try:
@@ -239,9 +235,8 @@ def api_admin_delete_course(course_id):
 
 # --- Module Management APIs ---
 @admin_api_bp.route('/courses/<int:course_id>/modules', methods=['POST'])
+@require_admin_auth
 def api_admin_create_module(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     data = request.get_json()
     if not data or not data.get('name'):
@@ -276,9 +271,8 @@ def api_admin_create_module(course_id):
     return jsonify({'message': 'Module created', 'module_id': module_id}), 201
 
 @admin_api_bp.route('/courses/<int:course_id>/modules', methods=['GET'])
+@require_admin_auth
 def api_admin_get_modules(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     conn = None
     try:
@@ -301,9 +295,8 @@ def api_admin_get_modules(course_id):
     return jsonify([dict(row) for row in modules_data])
 
 @admin_api_bp.route('/modules/<int:module_id>', methods=['PUT'])
+@require_admin_auth
 def api_admin_update_module(module_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     data = request.get_json()
     if not data:
@@ -342,9 +335,8 @@ def api_admin_update_module(module_id):
     return jsonify({'message': 'Module updated'}) if updated_rows > 0 else jsonify({'error': 'Module not found or no change'}), 404
 
 @admin_api_bp.route('/modules/<int:module_id>', methods=['DELETE'])
+@require_admin_auth
 def api_admin_delete_module(module_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
     
     conn = None
     try:
@@ -370,9 +362,8 @@ def api_admin_delete_module(module_id):
 
 # --- Lesson Management APIs ---
 @admin_api_bp.route('/courses/<int:course_id>/lessons', methods=['POST'])
+@require_admin_auth
 def api_admin_create_lesson_in_course(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -457,9 +448,8 @@ def api_admin_create_lesson_in_course(course_id):
     return jsonify({'message': 'Lesson created successfully', 'lesson_id': lesson_id}), 201
 
 @admin_api_bp.route('/courses/<int:course_id>/lessons', methods=['GET'])
+@require_admin_auth
 def api_admin_get_lessons_in_course(course_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -500,9 +490,8 @@ def api_admin_get_lessons_in_course(course_id):
     return jsonify(lessons)
 
 @admin_api_bp.route('/lessons/<int:lesson_id>', methods=['PUT'])
+@require_admin_auth
 def api_admin_update_lesson(lesson_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -586,9 +575,8 @@ def api_admin_update_lesson(lesson_id):
     return jsonify({'message': 'Lesson updated'}) if updated_rows > 0 else jsonify({'error': 'Lesson not found or no change'}), 404
 
 @admin_api_bp.route('/lessons/<int:lesson_id>', methods=['DELETE'])
+@require_admin_auth
 def api_admin_delete_lesson(lesson_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -623,9 +611,8 @@ def api_admin_delete_lesson(lesson_id):
 
 # --- User Management APIs ---
 @admin_api_bp.route('/users', methods=['GET'])
+@require_admin_auth
 def api_admin_get_users():
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -649,9 +636,8 @@ def api_admin_get_users():
     return jsonify(users)
 
 @admin_api_bp.route('/users/<int:user_id>', methods=['PUT'])
+@require_admin_auth
 def api_admin_update_user(user_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     data = request.get_json()
     if not data:
@@ -710,9 +696,8 @@ def api_admin_update_user(user_id):
     return jsonify({'message': 'User updated'}) if updated_rows > 0 else jsonify({'error': 'User not found'}), 404
 
 @admin_api_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@require_admin_auth
 def api_admin_delete_user(user_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -745,9 +730,8 @@ def api_admin_delete_user(user_id):
 
 # --- Enrollment Management APIs ---
 @admin_api_bp.route('/enrollments', methods=['GET'])
+@require_admin_auth
 def api_admin_get_enrollments():
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     conn = None
     try:
@@ -772,9 +756,8 @@ def api_admin_get_enrollments():
     return jsonify(enrollments)
 
 @admin_api_bp.route('/enrollments/<int:enrollment_id>', methods=['PUT'])
+@require_admin_auth
 def api_admin_update_enrollment(enrollment_id):
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Not authorized'}), 401
 
     data = request.get_json()
     if not data:
