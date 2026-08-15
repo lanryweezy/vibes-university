@@ -1,0 +1,3 @@
+## 2025-01-20 - [SQLite UNIQUE constraints and missing indexes on non-prefix columns]
+**Learning:** SQLite automatically creates unique indexes for `UNIQUE` constraints (e.g. `UNIQUE (user_id, course_id, lesson_id)` on `course_progress`). However, a query joining or filtering *only* on a non-prefix column of that constraint (e.g., `lesson_id`) cannot use the index, leading to full table scans. In this codebase, the admin analytics dashboard joined on `lesson_id`, causing O(N) full table scans over `course_progress`.
+**Action:** When a table has a composite UNIQUE constraint, always check if there are queries or JOINs that rely solely on non-prefix columns, and add dedicated indexes for those columns if they are queried frequently or joined.
