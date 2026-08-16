@@ -202,6 +202,13 @@
             border: 2px solid #ff6b35;
         }
 
+        .cta-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         /* Crisis Stats */
         .crisis-stats {
             background: #1a1a1a;
@@ -1039,7 +1046,7 @@
             const formData = new FormData(this);
 
             btn.disabled = true;
-            btn.innerText = 'Sending...';
+            btn.innerHTML = 'Sending... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
 
             try {
                 const response = await fetch('/api/contact', {
@@ -1068,7 +1075,7 @@
                 feedback.innerText = "An error occurred.";
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'Send Message';
+                btn.innerHTML = 'Send Message <i class="fas fa-paper-plane" style="margin-left: 8px;"></i>';
             }
         });
     </script>
