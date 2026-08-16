@@ -1,3 +1,3 @@
-## 2026-08-15 - Inconsistent Authentication Checks
-**Learning:** The application had inconsistent implementation of authentication checks. While auth decorators (`@require_admin_auth`, `@require_teacher_auth`) existed and were used in a few creation routes, the majority of the CRUD API routes in `admin_api_routes.py` and `teacher_api_routes.py` still used manual session checks (`if not session.get('..._logged_in')`).
-**Action:** Always search for consistent application of cross-cutting concerns like authentication decorators when exploring Flask application blueprints in this repository.
+## 2026-08-16 - Missing DELETE for Teacher Courses
+**Learning:** Found an incomplete implementation where teachers could create and edit their courses in `blueprints/teacher_api_routes.py`, but unlike other entities (modules, lessons) or the admin equivalent (`api_admin_delete_course`), they had no route to delete courses.
+**Action:** Always implement a complete CRUD set when an entity's parent scope demonstrates standard lifecycle management. Ensure consistent resource ownership verification (e.g., `teacher_id = session.get('teacher_id')`) on DELETE endpoints and manage database connection releases exclusively in the `finally` block to prevent leaks or duplicate pool release errors.

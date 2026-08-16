@@ -198,6 +198,36 @@ def api_teacher_update_course(course_id):
     
     return jsonify({'message': 'Course updated successfully'})
 
+@teacher_api_bp.route('/courses/<int:course_id>', methods=['DELETE'])
+@require_teacher_auth
+def api_teacher_delete_course(course_id):
+
+    teacher_id = session.get('teacher_id')
+    conn = None
+    try:
+        conn = get_db_connection()
+        # Check if course exists and belongs to the teacher
+        existing_course = conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
+        if not existing_course:
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
+
+        # Delete related records first (CASCADE should handle this, but being explicit)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM quiz_attempts WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM course_progress WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM lessons WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM modules WHERE course_id = ?", (course_id,))
+        cursor.execute("DELETE FROM enrollments WHERE course_type IN (SELECT name FROM courses WHERE id = ?)", (course_id,))
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        conn.commit()
+    except Exception as e:
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+    return jsonify({'message': 'Course deleted successfully'})
+
 # --- Module Management APIs ---
 @teacher_api_bp.route('/courses/<int:course_id>/modules', methods=['POST'])
 @require_teacher_auth
