@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template_string, redirect, url_for, session, request, jsonify
 import json
 import os
+import secrets
 from datetime import datetime
 
 # Import utilities
@@ -132,7 +133,7 @@ def admin_login():
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'vibesadmin123')
     if request.method == 'POST':
         password = request.form.get('password')
-        if password == ADMIN_PASSWORD:
+        if password and ADMIN_PASSWORD and secrets.compare_digest(password, ADMIN_PASSWORD):
             session['admin_logged_in'] = True
             log_info(app_logger, "Admin logged in successfully")
             return redirect(url_for('admin_page_bp.admin_dashboard'))
