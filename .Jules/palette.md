@@ -5,3 +5,7 @@
 ## 2024-08-16 - Add proper label associations to inline forms
 **Learning:** Found an accessibility pattern where standalone auth forms have proper labels but inline or custom-styled forms on marketing pages miss them (lacking `for` and `id` attributes).
 **Action:** Always ensure every form input or interactive element is programmatically associated with its `label` via `for` and `id` tags.
+
+## 2026-08-16 - Preserve Icons on Button State Changes
+**Learning:** When using innerText to update button loading states, child icon elements (<i class="fas...">) are destroyed and often not restored properly.
+**Action:** Always use innerHTML or explicitly target a text span inside the button to preserve icons during loading states, and ensure proper disabled visual feedback.
