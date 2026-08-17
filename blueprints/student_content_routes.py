@@ -3,6 +3,7 @@ import json
 import sqlite3
 import markdown
 import re
+import html
 from utils.db_utils import get_db_connection, return_db_connection
 from utils.logging_utils import db_logger, log_error
 
@@ -152,10 +153,10 @@ def view_lesson(lesson_id):
             lesson_render_content = f'''<div class="video-wrapper"><video controls><source src="{file_url}" type="video/{file_path.split('.')[-1].lower()}">Not supported.</video></div>'''
         else: lesson_render_content = '<p>Video content not available.</p>'
     elif content_type == 'quiz':
-        quiz_question = element_props.get('question', 'N/A')
+        quiz_question = html.escape(str(element_props.get('question', 'N/A')))
         options_list = element_props.get('options', [])
         if not isinstance(options_list, list): options_list = []
-        options_html = "".join([f"<div class='quiz-option' data-index='{i}'>{opt}</div>" for i, opt in enumerate(options_list)])
+        options_html = "".join([f"<div class='quiz-option' data-index='{i}'>{html.escape(str(opt))}</div>" for i, opt in enumerate(options_list)])
         lesson_render_content = f'''
             <div class='quiz-container'>
                 <h3 style="margin-bottom: 24px;">{quiz_question}</h3>
@@ -165,11 +166,11 @@ def view_lesson(lesson_id):
             </div>'''
     elif content_type == 'download' and lesson.get('file_path'):
         file_url = url_for('static', filename=lesson['file_path'].split('static/')[-1])
-        filename = lesson['file_path'].split('/')[-1]
+        filename = html.escape(lesson['file_path'].split('/')[-1])
         lesson_render_content = f'''<div class="download-section"><h3>{get_file_icon(filename)} {filename}</h3><p style="color: var(--text-muted);">Ready to download and implement.</p><a href="{file_url}" class="download-btn" download><i class="fas fa-cloud-download-alt"></i> Download Material</a></div>'''
     elif lesson.get('file_path'):
          file_url = url_for('static', filename=lesson['file_path'].split('static/')[-1])
-         filename = lesson['file_path'].split('/')[-1]
+         filename = html.escape(lesson['file_path'].split('/')[-1])
          if filename.split('.')[-1].lower() in ['jpg','png','gif','svg']: html_content = f"<img src='{file_url}' style='max-width:100%; border-radius: 20px;'>"
          else: html_content = f"<div class='download-section'><a href='{file_url}' download class='download-btn'><i class='fas fa-file-download'></i> Download {filename}</a></div>"
          lesson_render_content = html_content
