@@ -294,6 +294,10 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_course_progress_lesson_id ON course_progress(lesson_id)')
 
+        # ⚡ Bolt Optimization: Add index on payment_status for faster analytics queries
+        # (reduces full table scans when calculating revenue and completed enrollments)
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON enrollments(payment_status)')
+
         conn.commit()
         conn.close()
 
