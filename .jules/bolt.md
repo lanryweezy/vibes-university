@@ -9,3 +9,9 @@
 **Learning:** The `enrollments` table is heavily queried in analytics and dashboard features (calculating revenue, counting completed enrollments, etc.) using `WHERE payment_status = 'completed'`. Without an index on `payment_status`, these queries require full sequential table scans, severely impacting dashboard load times as the enrollments table grows.
 
 **Action:** Added a dedicated index `idx_enrollments_payment_status` on the `payment_status` column to avoid full table scans. In the future, explicitly look for low-cardinality status columns frequently used in filtering for aggregate/analytic queries and ensure they are indexed if queried extensively.
+
+## 2026-08-20 - Inefficient In-Memory Aggregation for Dashboard Stats
+
+**Learning:** The teacher dashboard previously calculated student counts and total earnings by fetching all related rows from the `enrollments` table using `.fetchall()` and then iterating over the list in Python (using `len()` and `sum()`). This is highly inefficient (O(N) memory and processing) and can become a significant bottleneck as the enrollments table grows, leading to slow dashboard load times and high memory usage.
+
+**Action:** Replaced the in-memory calculations with database-level aggregation using `COUNT(*)` and `SUM(price)` in a `.fetchone()` query. In the future, always use database aggregation functions instead of retrieving full datasets to aggregate in application code.
