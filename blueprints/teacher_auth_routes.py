@@ -119,9 +119,11 @@ def teacher_dashboard():
             # In a real app, you'd match course names to course_type or use a mapping table
             placeholders = ','.join(['?'] * len(courses))
             course_names = [c['name'] for c in courses]
-            enrollments = conn.execute(f"SELECT price FROM enrollments WHERE course_type IN ({placeholders}) AND payment_status = 'completed'", course_names).fetchall()
-            student_count = len(enrollments)
-            total_earnings = sum([e['price'] for e in enrollments])
+
+            # ⚡ Bolt Optimization: Use DB aggregation instead of fetching all rows into memory
+            stats = conn.execute(f"SELECT COUNT(*) as count, SUM(price) as total_earnings FROM enrollments WHERE course_type IN ({placeholders}) AND payment_status = 'completed'", course_names).fetchone()
+            student_count = stats['count'] if stats and stats['count'] else 0
+            total_earnings = stats['total_earnings'] if stats and stats['total_earnings'] else 0
 
         return render_template('teacher_dashboard.html',
                                teacher_name=teacher_name,
