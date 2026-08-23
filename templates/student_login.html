@@ -137,6 +137,13 @@
             transform: translateY(0);
         }
 
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .message {
             color: #fb7185;
             margin-top: 24px;
@@ -220,5 +227,13 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = 'Logging in... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+        });
+    </script>
 </body>
 </html>
