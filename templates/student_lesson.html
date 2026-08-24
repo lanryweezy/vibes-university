@@ -60,7 +60,12 @@
             margin-top: 20px;
             transition: all 0.3s;
         }
-        .download-btn:hover { background: var(--primary-light); transform: translateY(-2px); }
+        .download-btn:hover:not(:disabled) { background: var(--primary-light); transform: translateY(-2px); }
+        .download-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
 
         .quiz-option {
             background: rgba(255, 255, 255, 0.03);
@@ -173,9 +178,9 @@
                 return;
             }
 
-            const btn = event.target;
+            const btn = event.target.closest('button') || event.target;
             btn.disabled = true;
-            btn.innerText = 'Verifying...';
+            btn.innerHTML = 'Verifying... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
 
             fetch(`/api/student/submit-quiz/${lessonId}`, {
                 method: 'POST',
@@ -192,7 +197,7 @@
                     } else {
                         feedback.innerHTML = '<div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 20px; border-radius: 12px; margin-top: 20px; font-weight: 600;"><i class="fas fa-times-circle"></i> Not quite right. Review the material and try again.</div>';
                         btn.disabled = false;
-                        btn.innerText = 'Try Again';
+                        btn.innerHTML = 'Try Again <i class="fas fa-redo" style="margin-left: 8px;"></i>';
                     }
                 }
             });
