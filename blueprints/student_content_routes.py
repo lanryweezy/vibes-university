@@ -161,7 +161,7 @@ def view_lesson(lesson_id):
             <div class='quiz-container'>
                 <h3 style="margin-bottom: 24px;">{quiz_question}</h3>
                 <div id="quiz-options-list-{lesson['id']}">{options_html}</div>
-                <button onclick='submitStudentQuiz({lesson['id']})' class="download-btn" style="border:none; cursor:pointer; width: 100%;">Verify Mastery</button>
+                <button onclick='submitStudentQuiz({lesson['id']})' class="download-btn" style="border:none; cursor:pointer; width: 100%;">Verify Mastery <i class="fas fa-check-circle" style="margin-left: 8px;"></i></button>
                 <div id="quiz-feedback-{lesson['id']}"></div>
             </div>'''
     elif content_type == 'download' and lesson.get('file_path'):
