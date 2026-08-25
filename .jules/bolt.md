@@ -15,3 +15,9 @@
 **Learning:** The teacher dashboard previously calculated student counts and total earnings by fetching all related rows from the `enrollments` table using `.fetchall()` and then iterating over the list in Python (using `len()` and `sum()`). This is highly inefficient (O(N) memory and processing) and can become a significant bottleneck as the enrollments table grows, leading to slow dashboard load times and high memory usage.
 
 **Action:** Replaced the in-memory calculations with database-level aggregation using `COUNT(*)` and `SUM(price)` in a `.fetchone()` query. In the future, always use database aggregation functions instead of retrieving full datasets to aggregate in application code.
+
+## 2026-08-25 - Missing SQLite Index for Enrollments Enrolled At Sorting
+
+**Learning:** The `admin_dashboard` and analytics routes frequently query the `enrollments` table and sort the results by `enrolled_at DESC` (e.g., to get recent enrollments). Without an index on `enrolled_at`, SQLite performs a full table scan and uses a temporary B-tree to sort the entire dataset before applying `LIMIT 10`. This O(N log N) sorting process becomes a significant bottleneck as the enrollments table grows.
+
+**Action:** Added a dedicated index `idx_enrollments_enrolled_at` on the `enrolled_at` column. In the future, explicitly look for columns used in `ORDER BY` clauses combined with `LIMIT` on large tables, and ensure they are indexed to allow for O(1) index scans instead of full table temporary B-tree sorts.
