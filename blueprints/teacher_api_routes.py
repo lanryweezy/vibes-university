@@ -63,10 +63,11 @@ def api_teacher_create_course():
 @require_teacher_auth
 def api_teacher_get_courses():
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        courses_data = conn.execute("SELECT id, name, description, course_settings, created_at FROM courses ORDER BY created_at DESC").fetchall()
+        courses_data = conn.execute("SELECT id, name, description, course_settings, created_at FROM courses WHERE teacher_id = ? ORDER BY created_at DESC", (teacher_id,)).fetchall()
     except Exception as e:
         if conn:
             return_db_connection(conn)
@@ -90,15 +91,16 @@ def api_teacher_get_courses():
 @require_teacher_auth
 def api_teacher_get_course(course_id):
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        course_data = conn.execute("SELECT id, name, description, course_settings FROM courses WHERE id = ?", (course_id,)).fetchone()
+        course_data = conn.execute("SELECT id, name, description, course_settings FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
         
         if not course_data:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
         
         # Get modules for this course
         modules_data = conn.execute("SELECT id, name, description, order_index FROM modules WHERE course_id = ? ORDER BY order_index", (course_id,)).fetchall()
@@ -143,6 +145,7 @@ def api_teacher_get_course(course_id):
 @require_teacher_auth
 def api_teacher_update_course(course_id):
     
+    teacher_id = session.get('teacher_id')
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -150,12 +153,12 @@ def api_teacher_update_course(course_id):
     conn = None
     try:
         conn = get_db_connection()
-        # Check if course exists
-        existing_course = conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone()
+        # Check if course exists and belongs to teacher
+        existing_course = conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
         if not existing_course:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
         
         # Build update query dynamically
         fields_to_update = []
@@ -233,6 +236,7 @@ def api_teacher_delete_course(course_id):
 @require_teacher_auth
 def api_teacher_create_module(course_id):
     
+    teacher_id = session.get('teacher_id')
     data = request.get_json()
     if not data or not data.get('name'):
         return jsonify({'error': 'Missing module name'}), 400
@@ -244,11 +248,11 @@ def api_teacher_create_module(course_id):
     conn = None
     try:
         conn = get_db_connection()
-        # Verify course exists
-        if not conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone():
+        # Verify course exists and belongs to the teacher
+        if not conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone():
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
         
         cursor = conn.cursor()
         cursor.execute('INSERT INTO modules (course_id, name, description, order_index) VALUES (?, ?, ?, ?)',
@@ -269,14 +273,15 @@ def api_teacher_create_module(course_id):
 @require_teacher_auth
 def api_teacher_get_modules(course_id):
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        # Verify course exists
-        if not conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone():
+        # Verify course exists and belongs to the teacher
+        if not conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone():
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
         
         modules_data = conn.execute("SELECT id, name, description, order_index FROM modules WHERE course_id = ? ORDER BY order_index", (course_id,)).fetchall()
     except Exception as e:
@@ -360,15 +365,16 @@ def api_teacher_delete_module(module_id):
 @require_teacher_auth
 def api_teacher_create_lesson_in_course(course_id):
 
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        # Verify course exists
-        course = conn.execute('SELECT id, name FROM courses WHERE id = ?', (course_id,)).fetchone()
+        # Verify course exists and belongs to the teacher
+        course = conn.execute('SELECT id, name FROM courses WHERE id = ? AND teacher_id = ?', (course_id, teacher_id)).fetchone()
         if not course:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
 
         form_data = request.form  # For multipart/form-data
 
@@ -446,15 +452,16 @@ def api_teacher_create_lesson_in_course(course_id):
 @require_teacher_auth
 def api_teacher_get_lessons_in_course(course_id):
 
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        # Verify course exists
-        course = conn.execute('SELECT id FROM courses WHERE id = ?', (course_id,)).fetchone()
+        # Verify course exists and belongs to the teacher
+        course = conn.execute('SELECT id FROM courses WHERE id = ? AND teacher_id = ?', (course_id, teacher_id)).fetchone()
         if not course:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Course not found'}), 404
+            return jsonify({'error': 'Course not found or unauthorized'}), 404
 
         lessons_data = conn.execute('''
             SELECT l.id, l.lesson, l.description, l.content_type, l.file_path, 
@@ -488,15 +495,21 @@ def api_teacher_get_lessons_in_course(course_id):
 @require_teacher_auth
 def api_teacher_update_lesson(lesson_id):
 
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        # Verify lesson exists
-        existing_lesson = conn.execute('SELECT id, course_id, module_id FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+        # Verify lesson exists and belongs to the teacher via its course
+        existing_lesson = conn.execute('''
+            SELECT l.id, l.course_id, l.module_id
+            FROM lessons l
+            JOIN courses c ON l.course_id = c.id
+            WHERE l.id = ? AND c.teacher_id = ?
+        ''', (lesson_id, teacher_id)).fetchone()
         if not existing_lesson:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Lesson not found'}), 404
+            return jsonify({'error': 'Lesson not found or unauthorized'}), 404
 
         course_id = existing_lesson['course_id']
         form_data = request.form
@@ -573,15 +586,21 @@ def api_teacher_update_lesson(lesson_id):
 @require_teacher_auth
 def api_teacher_delete_lesson(lesson_id):
 
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        # Verify lesson exists
-        existing_lesson = conn.execute('SELECT file_path FROM lessons WHERE id = ?', (lesson_id,)).fetchone()
+        # Verify lesson exists and belongs to the teacher via its course
+        existing_lesson = conn.execute('''
+            SELECT l.file_path
+            FROM lessons l
+            JOIN courses c ON l.course_id = c.id
+            WHERE l.id = ? AND c.teacher_id = ?
+        ''', (lesson_id, teacher_id)).fetchone()
         if not existing_lesson:
             if conn:
                 return_db_connection(conn)
-            return jsonify({'error': 'Lesson not found'}), 404
+            return jsonify({'error': 'Lesson not found or unauthorized'}), 404
 
         # Delete file if exists
         if existing_lesson['file_path']:
