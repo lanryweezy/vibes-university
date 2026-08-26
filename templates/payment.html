@@ -54,7 +54,12 @@
             box-sizing: border-box;
             font-size: 1rem;
         }
-        input:focus, select:focus { border-color: var(--primary); outline: none; }
+        input:focus, select:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
+        }
 
         .btn-pay {
             width: 100%;
@@ -120,17 +125,17 @@
             </div>
 
             <div class="form-group">
-                <label for="name">Full Name</label>
+                <label for="name">Full Name <span style="color: #ef4444;" aria-hidden="true">*</span></label>
                 <input type="text" name="name" id="name" required placeholder="Sulaiman Olanrewaju" autocomplete="name">
             </div>
 
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email">Email Address <span style="color: #ef4444;" aria-hidden="true">*</span></label>
                 <input type="email" name="email" id="email" required placeholder="you@example.com" autocomplete="email">
             </div>
 
             <div class="form-group">
-                <label for="phone">Phone Number</label>
+                <label for="phone">Phone Number <span style="color: #ef4444;" aria-hidden="true">*</span></label>
                 <input type="tel" name="phone" id="phone" required placeholder="+234..." autocomplete="tel">
             </div>
 

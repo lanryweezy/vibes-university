@@ -13,3 +13,7 @@
 ## 2026-08-21 - Form Autocomplete & Mobile Input Optimization
 **Learning:** Adding correct `autocomplete` attributes (like `email`, `name`, `tel`, `current-password`) and using appropriate HTML5 input types (like `type="tel"` instead of `type="text"`) significantly improves mobile user experience. Using `type="tel"` triggers the numeric keypad on mobile devices, preventing users from having to switch keyboards manually, while `autocomplete` allows browsers to accurately fill in data, reducing friction during checkout or login.
 **Action:** Always include the correct `autocomplete` attribute on form fields, and strictly use `type="email"`, `type="tel"`, and `type="number"` where appropriate instead of defaulting to `type="text"` to ensure the best possible mobile input experience.
+
+## 2024-08-25 - Explicit Required Fields and Focus States
+**Learning:** Found that while form validation handles errors correctly, users benefit immensely from explicit visual cues that a field is required before submitting. Additionally, relying solely on border color changes for focus states (like `input:focus { border-color: primary }`) isn't always distinct enough for users with lower vision or when navigating via keyboard.
+**Action:** Always include a visual required indicator (like a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory fields. Furthermore, enhance focus states on interactive form elements to include a pronounced, high-contrast focus ring (e.g., using `box-shadow`) to guarantee clear feedback during keyboard navigation.
