@@ -1,3 +1,7 @@
 ## 2026-08-16 - Missing DELETE for Teacher Courses
 **Learning:** Found an incomplete implementation where teachers could create and edit their courses in `blueprints/teacher_api_routes.py`, but unlike other entities (modules, lessons) or the admin equivalent (`api_admin_delete_course`), they had no route to delete courses.
 **Action:** Always implement a complete CRUD set when an entity's parent scope demonstrates standard lifecycle management. Ensure consistent resource ownership verification (e.g., `teacher_id = session.get('teacher_id')`) on DELETE endpoints and manage database connection releases exclusively in the `finally` block to prevent leaks or duplicate pool release errors.
+
+## 2026-08-29 - Incomplete Ownership Verification on DELETE Routes
+**Learning:** Found a pattern where secondary resource endpoints (`api_teacher_delete_module` and `api_teacher_delete_lesson`) lacked the necessary ownership checks, unlike the primary resource endpoint (`api_teacher_delete_course`). Both secondary routes additionally had identical bugs manually calling `return_db_connection` before an early return, despite relying on `finally` later in the function.
+**Action:** Always traverse resource dependency structures (e.g. `lesson -> module -> course -> teacher`) to implement matching ownership constraints in `DELETE`/`PUT` endpoints. Verify all control flow paths in error boundaries only return connections once (typically via the `finally` block).
