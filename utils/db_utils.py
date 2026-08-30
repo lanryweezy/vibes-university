@@ -297,6 +297,7 @@ class DatabaseManager:
         # ⚡ Bolt Optimization: Add index on payment_status for faster analytics queries
         # (reduces full table scans when calculating revenue and completed enrollments)
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON enrollments(payment_status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_enrolled_at ON enrollments(enrolled_at)')
 
         conn.commit()
         conn.close()
