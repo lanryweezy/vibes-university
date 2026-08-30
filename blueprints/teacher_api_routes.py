@@ -150,10 +150,12 @@ def api_teacher_update_course(course_id):
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
         # Check if course exists and belongs to teacher
+        # Check if course exists
         existing_course = conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
         if not existing_course:
             if conn:
@@ -338,12 +340,21 @@ def api_teacher_update_module(module_id):
 @require_teacher_auth
 def api_teacher_delete_module(module_id):
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
+        # Verify module belongs to teacher's course
+        module_course = conn.execute('''
+            SELECT m.id FROM modules m
+            JOIN courses c ON m.course_id = c.id
+            WHERE m.id = ? AND c.teacher_id = ?
+        ''', (module_id, teacher_id)).fetchone()
+
+        if not module_course:
+            return jsonify({'error': 'Module not found or unauthorized'}), 404
+
         if conn.execute("SELECT COUNT(id) FROM lessons WHERE module_id = ?", (module_id,)).fetchone()['count'] > 0:
-            if conn:
-                return_db_connection(conn)
             return jsonify({'error': 'Module has lessons. Delete them first.'}), 400
         
         cursor = conn.cursor()
@@ -351,8 +362,6 @@ def api_teacher_delete_module(module_id):
         deleted_rows = cursor.rowcount
         conn.commit()
     except Exception as e:
-        if conn:
-            return_db_connection(conn)
         return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
         if conn:
@@ -590,16 +599,15 @@ def api_teacher_delete_lesson(lesson_id):
     conn = None
     try:
         conn = get_db_connection()
-        # Verify lesson exists and belongs to the teacher via its course
+        # Verify lesson exists and belongs to teacher
         existing_lesson = conn.execute('''
-            SELECT l.file_path
-            FROM lessons l
-            JOIN courses c ON l.course_id = c.id
+            SELECT l.file_path FROM lessons l
+            JOIN modules m ON l.module_id = m.id
+            JOIN courses c ON m.course_id = c.id
             WHERE l.id = ? AND c.teacher_id = ?
         ''', (lesson_id, teacher_id)).fetchone()
+
         if not existing_lesson:
-            if conn:
-                return_db_connection(conn)
             return jsonify({'error': 'Lesson not found or unauthorized'}), 404
 
         # Delete file if exists
@@ -614,8 +622,6 @@ def api_teacher_delete_lesson(lesson_id):
         deleted_rows = cursor.rowcount
         conn.commit()
     except Exception as e:
-        if conn:
-            return_db_connection(conn)
         return jsonify({'error': f'DB error: {str(e)}'}), 500
     finally:
         if conn:
