@@ -299,6 +299,7 @@ def api_teacher_get_modules(course_id):
 @teacher_api_bp.route('/modules/<int:module_id>', methods=['PUT'])
 @require_teacher_auth
 def api_teacher_update_module(module_id):
+    teacher_id = session.get('teacher_id')
     
     data = request.get_json()
     if not data:
@@ -322,6 +323,18 @@ def api_teacher_update_module(module_id):
     conn = None
     try:
         conn = get_db_connection()
+
+        # Verify module belongs to a course owned by the teacher
+        module_course = conn.execute('''
+            SELECT m.id FROM modules m
+            JOIN courses c ON m.course_id = c.id
+            WHERE m.id = ? AND c.teacher_id = ?
+        ''', (module_id, teacher_id)).fetchone()
+
+        if not module_course:
+            return_db_connection(conn)
+            return jsonify({'error': 'Unauthorized or module not found'}), 403
+
         cursor = conn.cursor()
         cursor.execute(f"UPDATE modules SET {','.join(fields)} WHERE id = ?", tuple(params_list))
         updated_rows = cursor.rowcount
