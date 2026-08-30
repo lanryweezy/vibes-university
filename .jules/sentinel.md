@@ -14,3 +14,11 @@
 **Vulnerability:** IDOR vulnerability in `blueprints/teacher_api_routes.py` where APIs for retrieving and updating courses lacked a check to verify if the course actually belonged to the requesting teacher (missing `AND teacher_id = ?` in SQL query).
 **Learning:** If an API takes an object ID (like `course_id`) from a parameter or URL and retrieves/modifies it without verifying ownership against the logged-in user's identity, an attacker could manipulate the ID to access or alter another user's resources.
 **Prevention:** Always enforce authorization at the data access level by including the current user's ID (e.g., `teacher_id = session.get('teacher_id')`) in the database query `WHERE` clause.
+## 2026-08-19 - [Sentinel] Fix IDOR in Module Update API
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in  where the API to update a module () failed to check if the module belonged to a course owned by the currently authenticated teacher.
+**Learning:** Even if an endpoint requires authentication (e.g., ), it must independently verify authorization by ensuring that the resource being modified is owned by or accessible to the logged-in user.
+**Prevention:** Always include a database query condition that enforces ownership (e.g., ) before executing any UPDATE or DELETE operations on resource identifiers received from client input.
+## 2026-08-19 - [Sentinel] Fix IDOR in Module Update API
+**Vulnerability:** Insecure Direct Object Reference (IDOR) in blueprints/teacher_api_routes.py where the API to update a module (PUT /modules/<module_id>) failed to check if the module belonged to a course owned by the currently authenticated teacher.
+**Learning:** Even if an endpoint requires authentication (e.g., @require_teacher_auth), it must independently verify authorization by ensuring that the resource being modified is owned by or accessible to the logged-in user.
+**Prevention:** Always include a database query condition that enforces ownership (e.g., AND teacher_id = ?) before executing any UPDATE or DELETE operations on resource identifiers received from client input.
