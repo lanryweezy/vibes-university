@@ -63,10 +63,11 @@ def api_teacher_create_course():
 @require_teacher_auth
 def api_teacher_get_courses():
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        courses_data = conn.execute("SELECT id, name, description, course_settings, created_at FROM courses ORDER BY created_at DESC").fetchall()
+        courses_data = conn.execute("SELECT id, name, description, course_settings, created_at FROM courses WHERE teacher_id = ? ORDER BY created_at DESC", (teacher_id,)).fetchall()
     except Exception as e:
         if conn:
             return_db_connection(conn)
@@ -90,10 +91,11 @@ def api_teacher_get_courses():
 @require_teacher_auth
 def api_teacher_get_course(course_id):
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
-        course_data = conn.execute("SELECT id, name, description, course_settings FROM courses WHERE id = ?", (course_id,)).fetchone()
+        course_data = conn.execute("SELECT id, name, description, course_settings FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
         
         if not course_data:
             if conn:
@@ -147,11 +149,12 @@ def api_teacher_update_course(course_id):
     if not data:
         return jsonify({'error': 'No data provided'}), 400
     
+    teacher_id = session.get('teacher_id')
     conn = None
     try:
         conn = get_db_connection()
         # Check if course exists
-        existing_course = conn.execute("SELECT id FROM courses WHERE id = ?", (course_id,)).fetchone()
+        existing_course = conn.execute("SELECT id FROM courses WHERE id = ? AND teacher_id = ?", (course_id, teacher_id)).fetchone()
         if not existing_course:
             if conn:
                 return_db_connection(conn)
