@@ -21,3 +21,7 @@
 **Learning:** The `admin_dashboard` and analytics routes frequently query the `enrollments` table and sort the results by `enrolled_at DESC` (e.g., to get recent enrollments). Without an index on `enrolled_at`, SQLite performs a full table scan and uses a temporary B-tree to sort the entire dataset before applying `LIMIT 10`. This O(N log N) sorting process becomes a significant bottleneck as the enrollments table grows.
 
 **Action:** Added a dedicated index `idx_enrollments_enrolled_at` on the `enrolled_at` column. In the future, explicitly look for columns used in `ORDER BY` clauses combined with `LIMIT` on large tables, and ensure they are indexed to allow for O(1) index scans instead of full table temporary B-tree sorts.
+
+## 2024-06-15 - Missing SQLite Index for Enrollments Payment Reference
+**Learning:** The `enrollments` table is frequently queried during payment webhooks and verifications using `WHERE payment_reference = ?`. Without a dedicated index on `payment_reference`, these lookups trigger a full sequential table scan. As the enrollments table grows, this O(N) scan becomes a significant bottleneck during high-volume payment processing, potentially leading to webhook timeouts and delayed course access.
+**Action:** Added a dedicated index `idx_enrollments_payment_reference` on the `payment_reference` column. In the future, explicitly look for columns used as unique identifiers in third-party integrations (like payment references or transaction IDs) and ensure they are indexed for O(1) lookups.
