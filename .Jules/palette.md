@@ -20,3 +20,7 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
 **Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2024-08-31 - Accessible Required Indicators & Password Toggle
+**Learning:** When adding visual required indicators (like asterisks), using `aria-hidden="true"` is essential because the inputs already have `required` attributes. This prevents screen readers from redundantly announcing "star" or "asterisk" next to "required". For password toggles, explicitly setting `type="button"` ensures it doesn't accidentally trigger a form submission, and dynamic `aria-label` updates ("Show password" / "Hide password") keep it accessible for screen readers.
+**Action:** Always use `aria-hidden="true"` on decorative visual indicators like asterisks in forms. Always ensure in-form interactive elements (like show/hide password buttons) explicitly have `type="button"` and dynamically update their `aria-label` based on state.
