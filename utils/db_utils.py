@@ -299,6 +299,9 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON enrollments(payment_status)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_enrolled_at ON enrollments(enrolled_at)')
 
+        # ⚡ Bolt Optimization: Add index on payment_reference for O(1) lookups during payment verification
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_reference ON enrollments(payment_reference)')
+
         conn.commit()
         conn.close()
 
