@@ -20,3 +20,7 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
 **Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2024-05-18 - Missing Password Visibility Toggle
+**Learning:** The application lacks a way for users to view the password they are typing during login, which can lead to frustration and failed login attempts.
+**Action:** Add a "Show/Hide Password" toggle button to password inputs to improve usability and accessibility.

@@ -81,18 +81,49 @@ def teacher_login():
     
     return render_template_string('''
     <html><head><title>Teacher Login - Vibes University</title>
-    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;}</style></head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}.input-wrapper{position:relative;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;box-sizing:border-box;}.password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#aaa;cursor:pointer;padding:0;margin-top:2px;}.password-toggle:hover{color:#fff;}.password-toggle:focus-visible{outline:2px solid #ff6b35;border-radius:4px;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;}</style></head>
     <body><div class="container"><h2>🎓 Teacher Login</h2>
     <form method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
     <label for="email">Email</label><input type="email" name="email" id="email" required>
-    <label for="password">Password</label><input type="password" name="password" id="password" required>
+    <label for="password">Password</label>
+    <div class="input-wrapper">
+        <input type="password" name="password" id="password" required>
+        <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+            <i class="fas fa-eye"></i>
+        </button>
+    </div>
     <button class="btn" type="submit">Login as Teacher</button></form>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
     <div style="margin-top:20px;text-align:center;">
     <p>Teacher registration is managed by administrators.<br>Contact admin team to become a teacher.</p>
     <p><a href="/" style="color:#ff6b35;">← Back to Home</a></p>
-    </div></div></body></html>
+    </div></div>
+    <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function(e) {
+                e.preventDefault();
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                const icon = this.querySelector('i');
+                if (type === 'password') {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                    this.setAttribute('aria-label', 'Show password');
+                } else {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                    this.setAttribute('aria-label', 'Hide password');
+                }
+            });
+        }
+    </script>
+    </body></html>
     ''', message=message, csrf_token=csrf_token)
 
 @teacher_auth_bp.route('/dashboard')
