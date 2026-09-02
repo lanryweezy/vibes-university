@@ -20,3 +20,10 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
 **Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
+**Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
+**Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2024-09-02 - Profile Form Accessibility and Autocomplete
+**Learning:** The profile form lacked explicit associations between `<label>` and `<input>` elements, making it difficult for screen readers to interpret. Additionally, mobile users experience friction without proper `autocomplete` and `type` attributes.
+**Action:** Always ensure `<label>` elements use the `for` attribute pointing to the `id` of the corresponding input. Use appropriate HTML5 `type` attributes (e.g., `type="tel"`) and `autocomplete` attributes (`name`, `email`, `tel`, `new-password`) to enhance mobile UX and overall accessibility.
