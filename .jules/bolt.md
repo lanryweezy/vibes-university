@@ -21,3 +21,9 @@
 **Learning:** The `admin_dashboard` and analytics routes frequently query the `enrollments` table and sort the results by `enrolled_at DESC` (e.g., to get recent enrollments). Without an index on `enrolled_at`, SQLite performs a full table scan and uses a temporary B-tree to sort the entire dataset before applying `LIMIT 10`. This O(N log N) sorting process becomes a significant bottleneck as the enrollments table grows.
 
 **Action:** Added a dedicated index `idx_enrollments_enrolled_at` on the `enrolled_at` column. In the future, explicitly look for columns used in `ORDER BY` clauses combined with `LIMIT` on large tables, and ensure they are indexed to allow for O(1) index scans instead of full table temporary B-tree sorts.
+
+## 2024-05-24 - Missing SQLite Index for Blogs Created At Sorting
+
+**Learning:** The `main_routes.py` and `blog_routes.py` files query the `blogs` table and sort the results by `created_at DESC` to get the most recent blogs (especially the landing page with a `LIMIT 3` clause). Without an index on `created_at`, SQLite performs a full table scan and uses a temporary B-tree to sort the dataset before returning the limited results, which degrades performance as the blogs table grows.
+
+**Action:** Added a dedicated index `idx_blogs_created_at` on the `created_at` column of the `blogs` table. In the future, look out for features that query for "recent" items (`ORDER BY date_column DESC LIMIT n`), as they almost always require an index on the date column to avoid full table scans and temporary sorting.
