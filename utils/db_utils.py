@@ -299,6 +299,10 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON enrollments(payment_status)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_enrolled_at ON enrollments(enrolled_at)')
 
+        # ⚡ Bolt Optimization: Add index on blogs(created_at) for faster landing page loads
+        # (avoids full table scans and temporary B-tree sorts when querying recent blogs with LIMIT 3)
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at)')
+
         conn.commit()
         conn.close()
 
