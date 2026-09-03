@@ -14,3 +14,7 @@
 **Vulnerability:** IDOR vulnerability in `blueprints/teacher_api_routes.py` where APIs for retrieving and updating courses lacked a check to verify if the course actually belonged to the requesting teacher (missing `AND teacher_id = ?` in SQL query).
 **Learning:** If an API takes an object ID (like `course_id`) from a parameter or URL and retrieves/modifies it without verifying ownership against the logged-in user's identity, an attacker could manipulate the ID to access or alter another user's resources.
 **Prevention:** Always enforce authorization at the data access level by including the current user's ID (e.g., `teacher_id = session.get('teacher_id')`) in the database query `WHERE` clause.
+## 2024-03-05 - [Sentinel] Fix Stored XSS in Video URL Rendering
+**Vulnerability:** Stored XSS vulnerability in `blueprints/student_content_routes.py` where user-provided `video_url_prop` and `video_id` were directly interpolated into f-strings for HTML generation and rendered using Jinja's `|safe` filter in `student_lesson.html`.
+**Learning:** When generating HTML strings dynamically in backend routes (e.g., using f-strings) that are later rendered with Jinja's `|safe` filter, Jinja's auto-escaping is bypassed. If user-controlled input is included in these strings, it can lead to Stored XSS vulnerabilities.
+**Prevention:** Manually escape any user-controlled input (e.g., using `html.escape()`) before interpolating it into HTML strings that will be rendered with the `|safe` filter.

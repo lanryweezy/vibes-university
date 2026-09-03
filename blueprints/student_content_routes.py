@@ -146,8 +146,11 @@ def view_lesson(lesson_id):
         if video_url_prop and video_url_prop.strip():
              if "youtube.com/watch?v=" in video_url_prop or "youtu.be/" in video_url_prop:
                 video_id = video_url_prop.split("v=")[-1].split("&")[0].split("youtu.be/")[-1].split("?")[0]
-                lesson_render_content = f'''<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/{video_id}" allowfullscreen></iframe></div>'''
-             else: lesson_render_content = f'''<div class="video-wrapper"><video controls><source src="{video_url_prop}">Not supported.</video></div>'''
+                video_id_safe = html.escape(str(video_id))
+                lesson_render_content = f'''<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/{video_id_safe}" allowfullscreen></iframe></div>'''
+             else:
+                video_url_safe = html.escape(str(video_url_prop))
+                lesson_render_content = f'''<div class="video-wrapper"><video controls><source src="{video_url_safe}">Not supported.</video></div>'''
         elif file_path:
             file_url = url_for('static', filename=file_path.split('static/')[-1])
             lesson_render_content = f'''<div class="video-wrapper"><video controls><source src="{file_url}" type="video/{file_path.split('.')[-1].lower()}">Not supported.</video></div>'''
