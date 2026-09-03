@@ -85,8 +85,8 @@ def teacher_login():
     <body><div class="container"><h2>🎓 Teacher Login</h2>
     <form method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <label for="email">Email</label><input type="email" name="email" id="email" required>
-    <label for="password">Password</label><input type="password" name="password" id="password" required>
+    <label for="email">Email</label><input type="email" name="email" id="email" required autocomplete="email">
+    <label for="password">Password</label><input type="password" name="password" id="password" required autocomplete="current-password">
     <button class="btn" type="submit">Login as Teacher</button></form>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
     <div style="margin-top:20px;text-align:center;">
