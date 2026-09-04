@@ -86,7 +86,24 @@ def teacher_login():
     <form method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
     <label for="email">Email</label><input type="email" name="email" id="email" required>
-    <label for="password">Password</label><input type="password" name="password" id="password" required>
+    <label for="password">Password</label>
+    <div style="position: relative;">
+        <input type="password" name="password" id="password" required style="padding-right: 40px; box-sizing: border-box; width: 100%;">
+        <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #fff; cursor: pointer;">
+            👁️
+        </button>
+    </div>
+    <script>
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        togglePassword.addEventListener('click', function (e) {
+            e.preventDefault();
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+            this.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+        });
+    </script>
     <button class="btn" type="submit">Login as Teacher</button></form>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
     <div style="margin-top:20px;text-align:center;">

@@ -113,6 +113,34 @@
             box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
         }
 
+
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px; /* for better tap target */
+        }
+        .password-toggle:hover, .password-toggle:focus {
+            color: #fff;
+            outline: none;
+        }
+        .password-toggle:focus-visible {
+            box-shadow: 0 0 0 2px var(--primary);
+            border-radius: 4px;
+        }
+        /* Override global .input-wrapper i for the nested button icon */
+        .input-wrapper .password-toggle i {
+            position: static;
+            transform: none;
+            left: auto;
+            top: auto;
+        }
+
         .btn {
             background: linear-gradient(45deg, var(--primary), var(--primary-dark));
             color: #fff;
@@ -210,7 +238,10 @@
                 <label for="password">Password</label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password" style="padding-right: 44px;">
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
                 </div>
             </div>
             <button class="btn" type="submit">Login to Dashboard</button>
@@ -234,6 +265,31 @@
             btn.disabled = true;
             btn.innerHTML = 'Logging in... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
         });
+
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function (e) {
+                // Prevent form submission or bubbling
+                e.preventDefault();
+
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                // Toggle the eye / eye-slash icon
+                const icon = this.querySelector('i');
+                if (type === 'text') {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                    this.setAttribute('aria-label', 'Hide password');
+                } else {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                    this.setAttribute('aria-label', 'Show password');
+                }
+            });
+        }
     </script>
 </body>
 </html>

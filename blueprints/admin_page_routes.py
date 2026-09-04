@@ -155,7 +155,23 @@ def admin_login():
             <h2>Admin Secure Access</h2>
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                <input type="password" name="password" placeholder="Admin Password" required>
+                <div style="position: relative; margin-bottom: 20px;">
+                    <input type="password" name="password" id="password" placeholder="Admin Password" required style="margin-bottom: 0; padding-right: 40px; box-sizing: border-box; width: 100%;">
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #fff; cursor: pointer;">
+                        👁️
+                    </button>
+                </div>
+                <script>
+                    const togglePassword = document.getElementById('togglePassword');
+                    const password = document.getElementById('password');
+                    togglePassword.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                        password.setAttribute('type', type);
+                        this.textContent = type === 'password' ? '👁️' : '🙈';
+                        this.setAttribute('aria-label', type === 'password' ? 'Show password' : 'Hide password');
+                    });
+                </script>
                 <button type="submit">Unlock Dashboard</button>
             </form>
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
