@@ -71,6 +71,7 @@ def manage_profile():
                 input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6); color: #fff; box-sizing: border-box; }
                 input:focus { border-color: var(--primary); outline: none; }
                 .btn { background: var(--primary); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
+                .btn:disabled { opacity: 0.7; cursor: not-allowed; }
                 .message { text-align: center; padding: 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); color: #10b981; margin-bottom: 24px; }
                 .back-link { display: block; text-align: center; margin-top: 24px; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
             </style>
@@ -81,25 +82,32 @@ def manage_profile():
                 {% if message %}<div class="message">{{ message }}</div>{% endif %}
                 <form method="post">
                     <div class="form-group">
-                        <label>Full Name</label>
-                        <input type="text" name="full_name" value="{{ user.full_name }}" required>
+                        <label for="full_name">Full Name <span style="color: #ef4444;" aria-hidden="true">*</span></label>
+                        <input type="text" name="full_name" id="full_name" value="{{ user.full_name }}" required autocomplete="name">
                     </div>
                     <div class="form-group">
-                        <label>Email (Permanent)</label>
-                        <input type="email" value="{{ user.email }}" disabled style="opacity: 0.5;">
+                        <label for="email">Email (Permanent)</label>
+                        <input type="email" id="email" value="{{ user.email }}" disabled style="opacity: 0.5;" autocomplete="email">
                     </div>
                     <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="text" name="phone" value="{{ user.phone }}" required>
+                        <label for="phone">Phone Number <span style="color: #ef4444;" aria-hidden="true">*</span></label>
+                        <input type="tel" name="phone" id="phone" value="{{ user.phone }}" required autocomplete="tel">
                     </div>
                     <div class="form-group">
-                        <label>New Password (leave blank to keep current)</label>
-                        <input type="password" name="new_password" placeholder="••••••••">
+                        <label for="new_password">New Password (leave blank to keep current)</label>
+                        <input type="password" name="new_password" id="new_password" placeholder="••••••••" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn">Update Profile</button>
                 </form>
                 <a href="{{ url_for('main_bp.dashboard') if role == 'student' else url_for('teacher_auth_bp.teacher_dashboard') }}" class="back-link">← Back to Dashboard</a>
             </div>
+            <script>
+                document.querySelector('form').addEventListener('submit', function() {
+                    const btn = this.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.innerHTML = 'Updating... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+                });
+            </script>
         </body>
         </html>
         ''', user=user, message=message, role=role)

@@ -20,3 +20,6 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
 **Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+## $(date +%Y-%m-%d) - Linking Labels and Inputs for Accessibility
+**Learning:** Form labels must be programmatically linked to their corresponding input fields using matching `for` and `id` attributes. This ensures that screen readers can correctly identify and announce the input's purpose to visually impaired users, significantly improving overall accessibility.
+**Action:** Always verify that every `<label>` tag has a `for` attribute that precisely matches the `id` of the related `<input>`, `<select>`, or `<textarea>` element.
