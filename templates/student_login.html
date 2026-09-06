@@ -200,17 +200,20 @@
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email">Email Address <span style="color: #ef4444;" aria-hidden="true">*</span></label>
                 <div class="input-wrapper">
                     <i class="fas fa-envelope"></i>
                     <input type="email" name="email" id="email" placeholder="name@example.com" required autocomplete="email">
                 </div>
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">Password <span style="color: #ef4444;" aria-hidden="true">*</span></label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
-                    <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password" style="padding-right: 44px;">
+                    <button type="button" id="togglePassword" aria-label="Show password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 4px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-eye" style="position: static; transform: none;"></i>
+                    </button>
                 </div>
             </div>
             <button class="btn" type="submit">Login to Dashboard</button>
@@ -233,6 +236,25 @@
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.innerHTML = 'Logging in... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+        });
+
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function (e) {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            const icon = this.querySelector('i');
+            if (type === 'text') {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                this.setAttribute('aria-label', 'Hide password');
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                this.setAttribute('aria-label', 'Show password');
+            }
         });
     </script>
 </body>
