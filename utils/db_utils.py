@@ -289,6 +289,8 @@ class DatabaseManager:
             pass
         
         # Add performance indexes for frequently queried foreign keys
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_modules_course_id ON modules(course_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_lessons_course_id ON lessons(course_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_lessons_module_id ON lessons(module_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments(user_id)')

@@ -21,3 +21,8 @@
 **Learning:** The `admin_dashboard` and analytics routes frequently query the `enrollments` table and sort the results by `enrolled_at DESC` (e.g., to get recent enrollments). Without an index on `enrolled_at`, SQLite performs a full table scan and uses a temporary B-tree to sort the entire dataset before applying `LIMIT 10`. This O(N log N) sorting process becomes a significant bottleneck as the enrollments table grows.
 
 **Action:** Added a dedicated index `idx_enrollments_enrolled_at` on the `enrolled_at` column. In the future, explicitly look for columns used in `ORDER BY` clauses combined with `LIMIT` on large tables, and ensure they are indexed to allow for O(1) index scans instead of full table temporary B-tree sorts.
+
+## 2026-08-30 - Missing SQLite Indexes for Foreign Keys (courses and modules)
+
+**Learning:** Foreign keys in SQLite are not automatically indexed. Specifically, the `teacher_id` column on the `courses` table and the `course_id` column on the `modules` table were missing dedicated indexes. This causes O(N) full table scans whenever querying `SELECT * FROM courses WHERE teacher_id = ?` or `SELECT * FROM modules WHERE course_id = ?`, which happens frequently when viewing the teacher dashboard or when loading a course's modules.
+**Action:** Added `idx_courses_teacher_id` and `idx_modules_course_id` indexes to optimize foreign key lookups and avoid full table scans. In the future, always verify that relationship columns used in `WHERE` clauses have explicit indexes created.
