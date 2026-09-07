@@ -299,6 +299,12 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_status ON enrollments(payment_status)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_enrolled_at ON enrollments(enrolled_at)')
 
+        # ⚡ Bolt Optimization: Add missing indexes for foreign keys and frequent lookups
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_modules_course_id ON modules(course_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enrollments_payment_reference ON enrollments(payment_reference)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at)')
+
         conn.commit()
         conn.close()
 
