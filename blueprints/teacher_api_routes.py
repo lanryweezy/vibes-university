@@ -300,6 +300,7 @@ def api_teacher_get_modules(course_id):
 @require_teacher_auth
 def api_teacher_update_module(module_id):
     
+    teacher_id = session.get('teacher_id')
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data'}), 400
@@ -322,6 +323,20 @@ def api_teacher_update_module(module_id):
     conn = None
     try:
         conn = get_db_connection()
+
+        # Verify module belongs to a course owned by the teacher
+        module_course = conn.execute('''
+            SELECT m.id
+            FROM modules m
+            JOIN courses c ON m.course_id = c.id
+            WHERE m.id = ? AND c.teacher_id = ?
+        ''', (module_id, teacher_id)).fetchone()
+
+        if not module_course:
+            if conn:
+                return_db_connection(conn)
+            return jsonify({'error': 'Module not found or unauthorized'}), 404
+
         cursor = conn.cursor()
         cursor.execute(f"UPDATE modules SET {','.join(fields)} WHERE id = ?", tuple(params_list))
         updated_rows = cursor.rowcount
@@ -334,7 +349,10 @@ def api_teacher_update_module(module_id):
         if conn:
             return_db_connection(conn)
     
-    return jsonify({'message': 'Module updated'}) if updated_rows > 0 else jsonify({'error': 'Module not found or no change'}), 404
+    if updated_rows > 0:
+        return jsonify({'message': 'Module updated'}), 200
+    else:
+        return jsonify({'error': 'Module not found or no change'}), 404
 
 @teacher_api_bp.route('/modules/<int:module_id>', methods=['DELETE'])
 @require_teacher_auth
