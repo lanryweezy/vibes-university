@@ -211,6 +211,9 @@
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
                     <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-eye" style="position: static; transform: none;"></i>
+                    </button>
                 </div>
             </div>
             <button class="btn" type="submit">Login to Dashboard</button>
@@ -233,6 +236,24 @@
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.innerHTML = 'Logging in... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+        });
+
+        document.getElementById('togglePassword').addEventListener('click', function(event) {
+            const passwordInput = document.getElementById('password');
+            const button = event.currentTarget;
+            const icon = button.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                button.setAttribute('aria-label', 'Hide password');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                button.setAttribute('aria-label', 'Show password');
+            }
         });
     </script>
 </body>

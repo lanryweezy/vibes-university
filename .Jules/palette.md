@@ -20,3 +20,7 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators
 **Learning:** Found that custom-styled input fields often lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2024-11-21 - Interactive Icons in Input Wrappers
+**Learning:** Adding interactive buttons (like show/hide password toggles) inside the application's existing `.input-wrapper` structure causes layout breakage if the button contains an icon. The global `.input-wrapper i` rule applies absolute positioning.
+**Action:** When adding interactive buttons with nested FontAwesome icons inside these wrappers, apply a specific CSS override (`position: static; transform: none;`) to the nested icon to prevent layout breakage, ensure `type="button"` is set to prevent form submission, and dynamically update `aria-label` for screen reader accessibility.
