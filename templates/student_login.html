@@ -94,6 +94,32 @@
             color: var(--text-muted);
         }
 
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+        }
+
+        .password-toggle:hover {
+            color: #fff;
+        }
+
+        .password-toggle:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
         input {
             width: 100%;
             padding: 14px 14px 14px 44px;
@@ -104,6 +130,10 @@
             box-sizing: border-box;
             font-size: 1rem;
             transition: all 0.3s;
+        }
+
+        input#password {
+            padding-right: 44px;
         }
 
         input:focus {
@@ -200,17 +230,20 @@
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="email">Email Address <span aria-hidden="true" style="color: var(--primary);">*</span></label>
                 <div class="input-wrapper">
                     <i class="fas fa-envelope"></i>
                     <input type="email" name="email" id="email" placeholder="name@example.com" required autocomplete="email">
                 </div>
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">Password <span aria-hidden="true" style="color: var(--primary);">*</span></label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
                     <input type="password" name="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                        <i class="fas fa-eye" style="position: static; transform: none; left: auto; top: auto;"></i>
+                    </button>
                 </div>
             </div>
             <button class="btn" type="submit">Login to Dashboard</button>
@@ -233,6 +266,25 @@
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.innerHTML = 'Logging in... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+        });
+
+        const togglePasswordBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePasswordBtn.addEventListener('click', function(e) {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            const icon = e.currentTarget.querySelector('i');
+            if (type === 'password') {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                e.currentTarget.setAttribute('aria-label', 'Show password');
+            } else {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                e.currentTarget.setAttribute('aria-label', 'Hide password');
+            }
         });
     </script>
 </body>
