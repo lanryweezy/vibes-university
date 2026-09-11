@@ -82,19 +82,19 @@ def manage_profile():
                 <form method="post">
                     <div class="form-group">
                         <label>Full Name</label>
-                        <input type="text" name="full_name" value="{{ user.full_name }}" required>
+                        <input type="text" name="full_name" value="{{ user.full_name }}" required autocomplete="name">
                     </div>
                     <div class="form-group">
                         <label>Email (Permanent)</label>
-                        <input type="email" value="{{ user.email }}" disabled style="opacity: 0.5;">
+                        <input type="email" value="{{ user.email }}" disabled style="opacity: 0.5;" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label>Phone Number</label>
-                        <input type="text" name="phone" value="{{ user.phone }}" required>
+                        <input type="tel" name="phone" value="{{ user.phone }}" required autocomplete="tel">
                     </div>
                     <div class="form-group">
                         <label>New Password (leave blank to keep current)</label>
-                        <input type="password" name="new_password" placeholder="••••••••">
+                        <input type="password" name="new_password" placeholder="••••••••" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn">Update Profile</button>
                 </form>
