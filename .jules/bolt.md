@@ -27,3 +27,9 @@
 **Learning:** Tables like `courses` and `blogs` are frequently queried and sorted by `created_at DESC` to show the most recent items. Without indices on these columns, SQLite performs a full table scan (`SCAN table`) and then sorts the entire result set in memory using a temporary B-tree (`USE TEMP B-TREE FOR ORDER BY`). This `O(N log N)` sorting process can become very slow as the number of rows increases, particularly when only the top few rows are needed (e.g., `LIMIT 3`).
 
 **Action:** Added dedicated indices `idx_courses_created_at` and `idx_blogs_created_at` on the `created_at` columns in the `courses` and `blogs` tables respectively. In the future, actively look for columns used in `ORDER BY` operations combined with `LIMIT` on large tables, and create indices to enable faster `SCAN USING INDEX` operations and avoid in-memory sorting bottlenecks.
+
+## 2026-10-24 - Missing SQLite Indexes for Foreign Keys and Lookups
+
+**Learning:** SQLite does not automatically index foreign keys (`course_id` on `modules`, `teacher_id` on `courses`) or columns frequently used for single-record lookups (like `payment_reference` on `enrollments`). Without these indexes, querying for modules in a course, courses for a teacher, or validating payment webhooks triggers full table scans which slows down endpoints as the application grows.
+
+**Action:** Added dedicated indexes for `modules(course_id)`, `courses(teacher_id)`, and `enrollments(payment_reference)`. In the future, explicitly look for frequently queried foreign keys or lookup references on large tables and ensure they are indexed to avoid full table sequential scans.
