@@ -24,3 +24,11 @@
 ## 2026-09-10 - Password Field Toggle Architecture and Label A11y
 **Learning:** Adding interactive buttons containing FontAwesome icons within global `.input-wrapper i` wrappers creates layout breakages because of absolutely-positioned child selectors. Furthermore, adding interactive elements requires dynamic updates to `aria-label` based on current state to remain accessible. Additionally, `page.get_by_label()` and generic `page.click()` fail for layered UI elements inside these input wrappers.
 **Action:** Always apply `position: static; transform: none;` overrides to icons nested in interactive wrapper buttons. Use `event.currentTarget` for dynamic element logic to ensure child elements don't steal the event target. During Playwright testing, explicitly use `page.evaluate("document.getElementById('elementId').click()")` to trigger clicks on visually layered wrapper elements to bypass "Element is outside of the viewport" Playwright strict mode errors.
+
+## 2024-08-16 - Add proper label associations to profile forms
+**Learning:** Found an accessibility pattern where the profile form was missing explicit `for` and `id` attributes associating the labels and input fields.
+**Action:** Always ensure every form input or interactive element is programmatically associated with its `label` via matching `for` and `id` attributes.
+
+## 2024-08-30 - High-Contrast Focus Rings & Required Indicators for profile form
+**Learning:** Found that custom-styled input fields on the profile page lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
+**Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
