@@ -21,11 +21,18 @@ def delete_lesson(lesson_id):
     """Delete a lesson."""
     conn = None
     try:
+        teacher_id = session.get('teacher_id')
         conn = get_db_connection()
-        # Check if lesson exists
-        lesson = conn.execute("SELECT course_id FROM lessons WHERE id = ?", (lesson_id,)).fetchone()
+        # Check if lesson exists and belongs to the teacher
+        lesson = conn.execute('''
+            SELECT l.course_id
+            FROM lessons l
+            JOIN courses c ON l.course_id = c.id
+            WHERE l.id = ? AND c.teacher_id = ?
+        ''', (lesson_id, teacher_id)).fetchone()
+
         if not lesson:
-            return "Lesson not found", 404
+            return "Lesson not found or unauthorized", 404
         
         course_id = lesson['course_id']
         
