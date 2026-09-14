@@ -146,8 +146,11 @@ def admin_login():
         body{background:#0f172a;color:#fff;font-family:'Inter', sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}
         .card{background:#1e293b;padding:40px;border-radius:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);width:350px;border:1px solid rgba(255,255,255,0.05);}
         h2{color:#ff6b35;text-align:center;margin-bottom:30px;}
-        input{width:100%;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;margin-bottom:20px;}
-        button{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;font-weight:bold;cursor:pointer;}
+        input{width:100%;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;margin-bottom:20px;transition:all 0.3s;}
+        input:focus{border-color:#ff6b35;outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.15);background:rgba(15,23,42,0.8);}
+        button{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;font-weight:bold;cursor:pointer;transition:all 0.3s;}
+        button:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.3);}
+        button:disabled{opacity:0.7;cursor:not-allowed;}
     </style>
     </head>
     <body>
@@ -155,11 +158,19 @@ def admin_login():
             <h2>Admin Secure Access</h2>
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                <input type="password" name="password" placeholder="Admin Password" required>
+                <label for="password" style="display:block;margin-bottom:8px;color:#94a3b8;font-size:0.85rem;font-weight:600;text-transform:uppercase;">Admin Password <span aria-hidden="true" style="color:#ef4444;margin-left:2px;">*</span></label>
+                <input type="password" id="password" name="password" placeholder="Admin Password" required autocomplete="current-password">
                 <button type="submit">Unlock Dashboard</button>
             </form>
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
         </div>
+        <script>
+            document.querySelector('form').addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = 'Unlocking...';
+            });
+        </script>
     </body></html>
     ''', message=message, csrf_token=csrf_token)
 
@@ -220,16 +231,24 @@ def admin_settings():
     message = ''
     if request.method == 'POST':
         message = 'Settings update simulated.'
+    csrf_token = generate_csrf_token()
 
     return render_template_string('''
-    <html><head><title>Settings</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}h3{color:#ff6b35;margin-top:0;}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;color:#94a3b8;}.form-group input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;}.save-btn{background:#10b981;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}</style></head>
+    <html><head><title>Settings</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}h3{color:#ff6b35;margin-top:0;}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;color:#94a3b8;}.form-group input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;transition:all 0.3s;}.form-group input:focus{border-color:#ff6b35;outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.save-btn{background:#10b981;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:all 0.3s;}.save-btn:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(16,185,129,0.3);}.save-btn:disabled{opacity:0.7;cursor:not-allowed;}</style></head>
     <body><div class="header"><h1>⚙️ System Settings</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
     <div class="section"><h3>🔐 Security Settings</h3><form method="post">
-    <input type="hidden" name="csrf_token" value="{{generate_csrf_token()}}">
-    <div class="form-group"><label>New Admin Password:</label><input type="password" name="new_password" placeholder="Enter new admin password"></div>
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+    <div class="form-group"><label for="new_password">New Admin Password:</label><input type="password" id="new_password" name="new_password" placeholder="Enter new admin password" autocomplete="new-password"></div>
     <button type="submit" class="save-btn">💾 Save Changes</button></form></div>
+    <script>
+        document.querySelector('form').addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '💾 Saving...';
+        });
+    </script>
     </body></html>
-    ''', message=message)
+    ''', message=message, csrf_token=csrf_token)
 
 @admin_page_bp.route('/announcements', methods=['GET', 'POST'])
 @require_admin_auth
@@ -237,6 +256,7 @@ def admin_settings():
 def admin_announcements():
     message = ''
     conn = None
+    csrf_token = generate_csrf_token()
     try:
         conn = get_db_connection()
         if request.method == 'POST':
@@ -249,15 +269,22 @@ def admin_announcements():
         
         anns = conn.execute("SELECT * FROM announcements ORDER BY created_at DESC").fetchall()
         return render_template_string('''
-        <html><head><title>Announcements</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;}.form-group input, .form-group textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;}.btn{background:#ff6b35;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}</style></head>
+        <html><head><title>Announcements</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;}.form-group input, .form-group textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;box-sizing:border-box;transition:all 0.3s;}.form-group input:focus, .form-group textarea:focus{border-color:#ff6b35;outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.btn{background:#ff6b35;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:all 0.3s;}.btn:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.3);}.btn:disabled{opacity:0.7;cursor:not-allowed;}</style></head>
         <body><div class="header"><h1>📢 Announcements</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
         <div class="section"><h3>New Announcement</h3><form method="post">
-        <input type="hidden" name="csrf_token" value="{{generate_csrf_token()}}">
-        <div class="form-group"><label>Title:</label><input type="text" name="title" required></div>
-        <div class="form-group"><label>Message:</label><textarea name="message_content" rows="4" required></textarea></div>
+        <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+        <div class="form-group"><label for="title">Title: <span aria-hidden="true" style="color:#ef4444;margin-left:2px;">*</span></label><input type="text" id="title" name="title" required></div>
+        <div class="form-group"><label for="message_content">Message: <span aria-hidden="true" style="color:#ef4444;margin-left:2px;">*</span></label><textarea id="message_content" name="message_content" rows="4" required></textarea></div>
         <button type="submit" class="btn">Post Announcement</button></form></div>
+        <script>
+            document.querySelector('form').addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = 'Posting...';
+            });
+        </script>
         </body></html>
-        ''', anns=anns)
+        ''', anns=anns, csrf_token=csrf_token)
     except Exception as e:
         log_error(app_logger, "Admin announcements error", error=str(e))
         return "Error", 500
