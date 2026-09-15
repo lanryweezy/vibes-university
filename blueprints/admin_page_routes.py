@@ -155,7 +155,7 @@ def admin_login():
             <h2>Admin Secure Access</h2>
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-                <input type="password" name="password" placeholder="Admin Password" required>
+                <input type="password" id="password" name="password" placeholder="Admin Password" required autocomplete="current-password" aria-label="Admin Password">
                 <button type="submit">Unlock Dashboard</button>
             </form>
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
@@ -226,7 +226,7 @@ def admin_settings():
     <body><div class="header"><h1>⚙️ System Settings</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
     <div class="section"><h3>🔐 Security Settings</h3><form method="post">
     <input type="hidden" name="csrf_token" value="{{generate_csrf_token()}}">
-    <div class="form-group"><label>New Admin Password:</label><input type="password" name="new_password" placeholder="Enter new admin password"></div>
+    <div class="form-group"><label for="new_password">New Admin Password:</label><input type="password" id="new_password" name="new_password" placeholder="Enter new admin password" autocomplete="new-password"></div>
     <button type="submit" class="save-btn">💾 Save Changes</button></form></div>
     </body></html>
     ''', message=message)
@@ -253,8 +253,8 @@ def admin_announcements():
         <body><div class="header"><h1>📢 Announcements</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
         <div class="section"><h3>New Announcement</h3><form method="post">
         <input type="hidden" name="csrf_token" value="{{generate_csrf_token()}}">
-        <div class="form-group"><label>Title:</label><input type="text" name="title" required></div>
-        <div class="form-group"><label>Message:</label><textarea name="message_content" rows="4" required></textarea></div>
+        <div class="form-group"><label for="title">Title: <span aria-hidden="true" style="color: #ef4444; margin-left: 2px;">*</span></label><input type="text" id="title" name="title" required></div>
+        <div class="form-group"><label for="message_content">Message: <span aria-hidden="true" style="color: #ef4444; margin-left: 2px;">*</span></label><textarea id="message_content" name="message_content" rows="4" required></textarea></div>
         <button type="submit" class="btn">Post Announcement</button></form></div>
         </body></html>
         ''', anns=anns)

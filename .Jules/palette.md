@@ -32,3 +32,11 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators for profile form
 **Learning:** Found that custom-styled input fields on the profile page lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2024-11-20 - Ensure submit buttons have loading states and forms have required indicators
+**Learning:** Found that basic standard forms (like the teacher login) often lack crucial UX feedback mechanisms such as loading states on form submission, which can lead to multiple submissions or user confusion. Also, custom styled forms frequently lack explicit visual markers for required fields.
+**Action:** Always add a disabled loading state (using `.disabled = true` and `innerHTML` with a spinner) to form submit buttons. Also, always include a visual required indicator (e.g., `<span aria-hidden="true" style="color: #ff6b35;">*</span>`) in the `<label>` of mandatory form fields.
+
+## 2024-11-20 - Ensure submit buttons have loading states and forms have required indicators
+**Learning:** Found that basic standard forms (like the teacher login) often lack crucial UX feedback mechanisms such as loading states on form submission, which can lead to multiple submissions or user confusion. Also, custom styled forms frequently lack explicit visual markers for required fields.
+**Action:** Always add a disabled loading state (using `.disabled = true` and `innerHTML` text change) to form submit buttons. Also, always include a visual required indicator (e.g., `<span aria-hidden="true" style="color: #ff6b35;">*</span>`) in the `<label>` of mandatory form fields.

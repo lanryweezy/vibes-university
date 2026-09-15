@@ -85,14 +85,24 @@ def teacher_login():
     <body><div class="container"><h2>🎓 Teacher Login</h2>
     <form method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <label for="email">Email</label><input type="email" name="email" id="email" required autocomplete="email">
-    <label for="password">Password</label><input type="password" name="password" id="password" required autocomplete="current-password">
+    <label for="email">Email <span aria-hidden="true" style="color: #ff6b35;">*</span></label><input type="email" name="email" id="email" required autocomplete="email">
+    <label for="password">Password <span aria-hidden="true" style="color: #ff6b35;">*</span></label><input type="password" name="password" id="password" required autocomplete="current-password">
     <button class="btn" type="submit">Login as Teacher</button></form>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
     <div style="margin-top:20px;text-align:center;">
     <p>Teacher registration is managed by administrators.<br>Contact admin team to become a teacher.</p>
     <p><a href="/" style="color:#ff6b35;">← Back to Home</a></p>
-    </div></div></body></html>
+    </div></div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = 'Logging in...';
+        });
+    </script>
+
+    </body></html>
     ''', message=message, csrf_token=csrf_token)
 
 @teacher_auth_bp.route('/dashboard')
