@@ -30,3 +30,6 @@
 ## 2024-03-24 - Missing Indexes on Frequently Grouped Columns
 **Learning:** In SQLite, queries that use `GROUP BY column_name` or `WHERE column_name IN (...)` (such as analytics or reporting queries) can trigger full table scans if the column is not indexed, even if the primary key and foreign keys are. The `enrollments` table lacked an index on `course_type`, leading to slow analytics queries as data grows.
 **Action:** Always verify that columns frequently used for aggregation (`GROUP BY`), filtering, or large `IN` clauses have appropriate indexes created during database initialization, especially for tables that grow rapidly like `enrollments`.
+## 2024-06-11 - Add explicit indexes for frequently queried foreign keys
+**Learning:** Foreign keys and columns used for grouping in SQLite are not automatically indexed. When querying relationships (e.g. `courses` by `teacher_id`, or `modules` by `course_id`), this causes O(N) full table scans if no index exists.
+**Action:** Always manually create explicitly defined indexes using `CREATE INDEX` for relationship columns, WHERE clauses, or GROUP BY statements to guarantee index usage and prevent full table scans.

@@ -307,6 +307,10 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_created_at ON courses(created_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at)')
 
+        # ⚡ Bolt Optimization: Add index on foreign keys to prevent full table scans when querying relationships
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_modules_course_id ON modules(course_id)')
+
         conn.commit()
         conn.close()
 
