@@ -72,6 +72,7 @@ def manage_profile():
                 input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15); background: rgba(15, 23, 42, 0.8); }
                 .btn { background: var(--primary); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 16px; transition: all 0.3s; }
                 .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.3); }
+                .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
                 .message { text-align: center; padding: 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); color: #10b981; margin-bottom: 24px; }
                 .back-link { display: block; text-align: center; margin-top: 24px; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
             </style>
@@ -101,6 +102,13 @@ def manage_profile():
                 </form>
                 <a href="{{ url_for('main_bp.dashboard') if role == 'student' else url_for('teacher_auth_bp.teacher_dashboard') }}" class="back-link">← Back to Dashboard</a>
             </div>
+            <script>
+                document.querySelector('form').addEventListener('submit', function() {
+                    const btn = this.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.innerHTML = 'Updating... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+                });
+            </script>
         </body>
         </html>
         ''', user=user, message=message, role=role)
