@@ -13,3 +13,7 @@
 ## 2026-08-19 - Standardizing Async/Sync Button Loading States
 **Learning:** When implementing loading states on standard synchronous forms (like login or payment), adding a disabled state with a FontAwesome spinner provides immediate visual feedback and prevents duplicate submissions while the server processes the request.
 **Action:** Apply this pattern to all standard form submit buttons across the application using `disabled` and `innerHTML`.
+
+## 2026-09-18 - Avoid CDN injection for minor UX improvements
+**Learning:** Adding new external UI dependencies (like injecting FontAwesome via `<link>` CDN) purely for a single micro-interaction, such as a loading spinner on a form button, violates the strict boundary constraint of not introducing new UI dependencies. It also creates risks related to privacy, offline-availability, and latency where the font may not render quickly enough during synchronous form submission, leaving the spinner invisible.
+**Action:** When updating button loading states via JavaScript, use `innerHTML` with text or emojis (e.g., `Unlocking ⏳`) instead of relying on external dependencies like FontAwesome. Also, ensure the query selector handles buttons safely (`querySelector('button[type="submit"], button:not([type])')`) to avoid `TypeError`.
