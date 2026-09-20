@@ -32,3 +32,7 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators for profile form
 **Learning:** Found that custom-styled input fields on the profile page lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+
+## 2026-09-20 - Adding required indicators and focus styles to teacher login form
+**Learning:** Verified that inline templates (like the ones in `blueprints/teacher_auth_routes.py`) also lacked proper required indicators and high-contrast focus styles. Added those, and ensured a loading state was correctly implemented on the submit button.
+**Action:** When updating form accessibility, double-check forms that are rendered via inline strings, not just standalone HTML templates, and continue ensuring proper loading state implementations that don't overwrite child nodes.
