@@ -63,11 +63,13 @@ def student_courses():
                     modules[module_name_from_join] = []
                 modules[module_name_from_join].append(lesson_dict)
 
-        progress_data = conn.execute("SELECT course_id, lesson_id, completed FROM course_progress WHERE user_id = ?", (enrollment['user_id'],)).fetchall()
+        # ⚡ Bolt Optimization: Only fetch progress for the current course instead of all courses
         progress_lookup = {}
-        for p_row in progress_data:
-            key = f"{p_row['course_id']}_{p_row['lesson_id']}"
-            progress_lookup[key] = p_row['completed']
+        if course_details:
+            progress_data = conn.execute("SELECT lesson_id, completed FROM course_progress WHERE user_id = ? AND course_id = ?", (enrollment['user_id'], course_details['id'])).fetchall()
+            for p_row in progress_data:
+                key = f"{course_details['id']}_{p_row['lesson_id']}"
+                progress_lookup[key] = p_row['completed']
     except Exception as e:
         log_error(db_logger, "Failed to retrieve student courses data", error=str(e))
         return "Error loading courses", 500

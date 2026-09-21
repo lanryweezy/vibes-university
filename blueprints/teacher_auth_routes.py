@@ -115,13 +115,13 @@ def teacher_dashboard():
         total_earnings = 0
 
         if course_ids:
-            # Simple simulation of student count and earnings based on enrollments
-            # In a real app, you'd match course names to course_type or use a mapping table
-            placeholders = ','.join(['?'] * len(courses))
-            course_names = [c['name'] for c in courses]
-
-            # ⚡ Bolt Optimization: Use DB aggregation instead of fetching all rows into memory
-            stats = conn.execute(f"SELECT COUNT(*) as count, SUM(price) as total_earnings FROM enrollments WHERE course_type IN ({placeholders}) AND payment_status = 'completed'", course_names).fetchone()
+            # ⚡ Bolt Optimization: Use a JOIN to avoid fetching all course names into memory
+            stats = conn.execute("""
+                SELECT COUNT(e.id) as count, SUM(e.price) as total_earnings
+                FROM enrollments e
+                JOIN courses c ON e.course_type = c.name
+                WHERE c.teacher_id = ? AND e.payment_status = 'completed'
+            """, (teacher_id,)).fetchone()
             student_count = stats['count'] if stats and stats['count'] else 0
             total_earnings = stats['total_earnings'] if stats and stats['total_earnings'] else 0
 
@@ -145,20 +145,20 @@ def view_earnings():
     conn = None
     try:
         conn = get_db_connection()
-        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
-        course_names = [c['name'] for c in courses]
 
-        earnings_data = []
-        total_earnings = 0
-        if course_names:
-            placeholders = ','.join(['?'] * len(course_names))
-            earnings_data = conn.execute(f"""
-                SELECT course_type, COUNT(*) as enrollment_count, SUM(price) as revenue
-                FROM enrollments
-                WHERE course_type IN ({placeholders}) AND payment_status = 'completed'
-                GROUP BY course_type
-            """, course_names).fetchall()
-            total_earnings = sum([row['revenue'] for row in earnings_data])
+        # Make sure the courses variable is available for template rendering (or other backend logic) even though not strictly required by the new JOIN query
+        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
+
+        # ⚡ Bolt Optimization: Use JOIN to get earnings per course instead of multiple queries
+        earnings_data = conn.execute("""
+            SELECT e.course_type, COUNT(e.id) as enrollment_count, SUM(e.price) as revenue
+            FROM enrollments e
+            JOIN courses c ON e.course_type = c.name
+            WHERE c.teacher_id = ? AND e.payment_status = 'completed'
+            GROUP BY e.course_type
+        """, (teacher_id,)).fetchall()
+
+        total_earnings = sum([row['revenue'] for row in earnings_data]) if earnings_data else 0
 
         return render_template_string('''
         <!DOCTYPE html>
@@ -237,20 +237,19 @@ def manage_students():
     conn = None
     try:
         conn = get_db_connection()
-        # Find courses taught by this teacher
-        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
-        course_names = [c['name'] for c in courses]
 
-        students = []
-        if course_names:
-            placeholders = ','.join(['?'] * len(course_names))
-            students = conn.execute(f"""
-                SELECT u.full_name, u.email, e.course_type, e.enrolled_at
-                FROM users u
-                JOIN enrollments e ON u.id = e.user_id
-                WHERE e.course_type IN ({placeholders}) AND e.payment_status = 'completed'
-                ORDER BY e.enrolled_at DESC
-            """, course_names).fetchall()
+        # Ensure courses variable exists for backend backward compatibility
+        courses = conn.execute("SELECT name FROM courses WHERE teacher_id = ?", (teacher_id,)).fetchall()
+
+        # ⚡ Bolt Optimization: Use JOIN to fetch students directly for teacher's courses
+        students = conn.execute("""
+            SELECT u.full_name, u.email, e.course_type, e.enrolled_at
+            FROM users u
+            JOIN enrollments e ON u.id = e.user_id
+            JOIN courses c ON e.course_type = c.name
+            WHERE c.teacher_id = ? AND e.payment_status = 'completed'
+            ORDER BY e.enrolled_at DESC
+        """, (teacher_id,)).fetchall()
 
         return render_template_string('''
         <!DOCTYPE html>
