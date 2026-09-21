@@ -32,3 +32,6 @@
 ## 2024-08-30 - High-Contrast Focus Rings & Required Indicators for profile form
 **Learning:** Found that custom-styled input fields on the profile page lose standard browser focus rings, harming keyboard accessibility, and required fields lack clear visual indicators (like red asterisks) even if they have the `required` attribute.
 **Action:** Always include a visual required indicator (e.g., a red asterisk with `aria-hidden="true"`) in the `<label>` of mandatory form fields, and provide a clear, high-contrast focus ring (such as a `box-shadow`) for interactive elements to improve accessibility and keyboard navigation.
+## 2024-10-24 - Async Button Loading States without FontAwesome
+**Learning:** Using FontAwesome classes for button loading states fails or displays missing icons if FontAwesome isn't explicitly included in the page template (e.g. `teacher_login` page without FontAwesome).
+**Action:** When adding async button loading states on pages where you are uncertain if icon fonts exist, prefer utilizing universal text emojis (like `⏳`) to ensure consistent visual feedback across all templates.
