@@ -101,6 +101,19 @@ def manage_profile():
                 </form>
                 <a href="{{ url_for('main_bp.dashboard') if role == 'student' else url_for('teacher_auth_bp.teacher_dashboard') }}" class="back-link">← Back to Dashboard</a>
             </div>
+            <script>
+                const form = document.querySelector('form');
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        const btn = this.querySelector('button[type="submit"]');
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.innerHTML = 'Updating... <span style="display:inline-block; animation:spin 1s linear infinite; margin-left: 8px;">⟳</span>';
+                        }
+                    });
+                }
+            </script>
+            <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
         </body>
         </html>
         ''', user=user, message=message, role=role)

@@ -13,3 +13,6 @@
 ## 2026-08-19 - Standardizing Async/Sync Button Loading States
 **Learning:** When implementing loading states on standard synchronous forms (like login or payment), adding a disabled state with a FontAwesome spinner provides immediate visual feedback and prevents duplicate submissions while the server processes the request.
 **Action:** Apply this pattern to all standard form submit buttons across the application using `disabled` and `innerHTML`.
+## 2026-09-22 - Adding custom keyframe animations in inline templates
+**Learning:** When injecting `<style>` blocks for custom animations (like `@keyframes spin`) directly into Python inline templates using `render_template_string`, no special escaping is needed for the CSS block itself, but they should be placed safely within the body to prevent breaking existing layouts, especially when external stylesheet links aren't trivially editable.
+**Action:** Always include scoped or globally unique animation names when injecting CSS dynamically to avoid naming collisions with external stylesheets.

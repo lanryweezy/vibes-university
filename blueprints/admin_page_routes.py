@@ -160,6 +160,19 @@ def admin_login():
             </form>
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
         </div>
+    <script>
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = 'Processing... <span style="display:inline-block; animation:spin 1s linear infinite; margin-left: 8px;">⟳</span>';
+                }
+            });
+        }
+    </script>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
     </body></html>
     ''', message=message, csrf_token=csrf_token)
 
@@ -228,6 +241,19 @@ def admin_settings():
     <input type="hidden" name="csrf_token" value="{{generate_csrf_token()}}">
     <div class="form-group"><label>New Admin Password:</label><input type="password" name="new_password" placeholder="Enter new admin password"></div>
     <button type="submit" class="save-btn">💾 Save Changes</button></form></div>
+    <script>
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '💾 Saving... <span style="display:inline-block; animation:spin 1s linear infinite; margin-left: 8px;">⟳</span>';
+                }
+            });
+        }
+    </script>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
     </body></html>
     ''', message=message)
 
@@ -256,6 +282,19 @@ def admin_announcements():
         <div class="form-group"><label>Title:</label><input type="text" name="title" required></div>
         <div class="form-group"><label>Message:</label><textarea name="message_content" rows="4" required></textarea></div>
         <button type="submit" class="btn">Post Announcement</button></form></div>
+        <script>
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    const btn = this.querySelector('button[type="submit"]');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = 'Posting... <span style="display:inline-block; animation:spin 1s linear infinite; margin-left: 8px;">⟳</span>';
+                    }
+                });
+            }
+        </script>
+        <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
         </body></html>
         ''', anns=anns)
     except Exception as e:

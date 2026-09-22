@@ -92,7 +92,21 @@ def teacher_login():
     <div style="margin-top:20px;text-align:center;">
     <p>Teacher registration is managed by administrators.<br>Contact admin team to become a teacher.</p>
     <p><a href="/" style="color:#ff6b35;">← Back to Home</a></p>
-    </div></div></body></html>
+    </div></div>
+    <script>
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = 'Processing... <span style="display:inline-block; animation:spin 1s linear infinite; margin-left: 8px;">⟳</span>';
+                }
+            });
+        }
+    </script>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+    </body></html>
     ''', message=message, csrf_token=csrf_token)
 
 @teacher_auth_bp.route('/dashboard')
