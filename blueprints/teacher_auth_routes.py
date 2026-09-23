@@ -81,13 +81,20 @@ def teacher_login():
     
     return render_template_string('''
     <html><head><title>Teacher Login - Vibes University</title>
-    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;}</style></head>
+    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;box-sizing:border-box;transition:all 0.3s;}input:focus,select:focus{outline:none;border:1px solid #ff6b35;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;transition:all 0.3s;}.btn:disabled{opacity:0.7;cursor:not-allowed;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;}</style></head>
     <body><div class="container"><h2>🎓 Teacher Login</h2>
-    <form method="post">
+    <form method="post" id="teacher-login-form">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <label for="email">Email</label><input type="email" name="email" id="email" required autocomplete="email">
-    <label for="password">Password</label><input type="password" name="password" id="password" required autocomplete="current-password">
+    <label for="email">Email <span aria-hidden="true" style="color:#ff6b35;">*</span></label><input type="email" name="email" id="email" required autocomplete="email">
+    <label for="password">Password <span aria-hidden="true" style="color:#ff6b35;">*</span></label><input type="password" name="password" id="password" required autocomplete="current-password">
     <button class="btn" type="submit">Login as Teacher</button></form>
+    <script>
+        document.getElementById('teacher-login-form').addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = 'Logging in... ⏳';
+        });
+    </script>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
     <div style="margin-top:20px;text-align:center;">
     <p>Teacher registration is managed by administrators.<br>Contact admin team to become a teacher.</p>
