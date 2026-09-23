@@ -36,3 +36,6 @@
 ## 2026-09-20 - Adding required indicators and focus styles to teacher login form
 **Learning:** Verified that inline templates (like the ones in `blueprints/teacher_auth_routes.py`) also lacked proper required indicators and high-contrast focus styles. Added those, and ensured a loading state was correctly implemented on the submit button.
 **Action:** When updating form accessibility, double-check forms that are rendered via inline strings, not just standalone HTML templates, and continue ensuring proper loading state implementations that don't overwrite child nodes.
+## 2024-09-14 - Passing variables to `render_template_string`
+**Learning:** When making UX changes to inline templates using `render_template_string` that are protected by `@csrf_protect` (e.g., in `blueprints/admin_page_routes.py`), the `csrf_token` must be explicitly generated in the route logic using `generate_csrf_token()` and passed into the template context as a variable (e.g. `csrf_token=csrf_token`). Using `{{generate_csrf_token()}}` directly in the template can cause an `UndefinedError` if the function isn't globally available.
+**Action:** Always ensure any necessary context variables, especially `csrf_token` in protected forms, are explicitly generated and passed to `render_template_string`.
