@@ -30,3 +30,8 @@
 ## 2024-03-24 - Missing Indexes on Frequently Grouped Columns
 **Learning:** In SQLite, queries that use `GROUP BY column_name` or `WHERE column_name IN (...)` (such as analytics or reporting queries) can trigger full table scans if the column is not indexed, even if the primary key and foreign keys are. The `enrollments` table lacked an index on `course_type`, leading to slow analytics queries as data grows.
 **Action:** Always verify that columns frequently used for aggregation (`GROUP BY`), filtering, or large `IN` clauses have appropriate indexes created during database initialization, especially for tables that grow rapidly like `enrollments`.
+
+## 2026-09-01 - Replace Dynamic IN Clauses with SQL JOINs
+
+**Learning:** The `teacher_dashboard`, `view_earnings`, and `manage_students` routes originally queried a teacher's courses, constructed a dynamic list of `IN ({placeholders})` in Python, and executed a secondary query to find related enrollments. This creates memory allocations for lists/strings in Python application memory and can scale poorly when the number of courses or enrollments grows (triggering N+1-style intermediate memory bottlenecks).
+**Action:** Replaced the intermediate python-based dynamic string formatting and list lookups with a single efficient SQL query. By doing `JOIN courses c ON e.course_type = c.name WHERE c.teacher_id = ?`, the database natively handles the relation, maintaining code simplicity, drastically lowering application memory footprints, and providing the SQL optimizer full context for indexing.
