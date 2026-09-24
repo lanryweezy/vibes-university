@@ -185,7 +185,23 @@ def admin_users():
     conn = None
     try:
         conn = get_db_connection()
-        users = conn.execute("SELECT u.*, COUNT(e.id) as enrollment_count, SUM(CASE WHEN e.payment_status = 'completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN e.payment_status = 'completed' THEN e.price ELSE 0 END) as total_spent FROM users u LEFT JOIN enrollments e ON u.id = e.user_id GROUP BY u.id ORDER BY u.created_at DESC").fetchall()
+        # ⚡ Bolt Optimization: Pre-aggregate enrollments to avoid expensive O(N*M) GROUP BY on joined users table
+        users = conn.execute("""
+            SELECT u.*,
+                   COALESCE(e.enrollment_count, 0) as enrollment_count,
+                   COALESCE(e.completed_enrollments, 0) as completed_enrollments,
+                   COALESCE(e.total_spent, 0) as total_spent
+            FROM users u
+            LEFT JOIN (
+                SELECT user_id,
+                       COUNT(id) as enrollment_count,
+                       SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as completed_enrollments,
+                       SUM(CASE WHEN payment_status = 'completed' THEN price ELSE 0 END) as total_spent
+                FROM enrollments
+                GROUP BY user_id
+            ) e ON u.id = e.user_id
+            ORDER BY u.created_at DESC
+        """).fetchall()
         return render_template_string('''
         <html><head><title>User Management</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden;}.table th,.table td{padding:15px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}.table th{background:#0f172a;color:#94a3b8;font-weight:bold;}.table tr:hover{background:rgba(255,255,255,0.02);}.status-active{color:#10b981;}.status-inactive{color:#ef4444;}.user-email{color:#ff6b35;}</style></head>
         <body><div class="header"><h1>👥 User Management</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
@@ -208,7 +224,22 @@ def admin_analytics():
         conn = get_db_connection()
         monthly_revenue = conn.execute("SELECT strftime('%Y-%m',enrolled_at) as month, SUM(price) as revenue, COUNT(*) as enrollments FROM enrollments WHERE payment_status='completed' GROUP BY 1 ORDER BY 1 DESC LIMIT 12").fetchall()
         course_performance = conn.execute("SELECT course_type, COUNT(*) as total_enrollments, SUM(CASE WHEN payment_status='completed' THEN 1 ELSE 0 END) as completed_enrollments, SUM(CASE WHEN payment_status='completed' THEN price ELSE 0 END) as revenue, AVG(CASE WHEN payment_status='completed' THEN price ELSE NULL END) as avg_revenue FROM enrollments GROUP BY 1").fetchall()
-        lesson_stats = conn.execute("SELECT c.name as course_name, m.name as module_name, l.lesson, COUNT(cp.id) as completions FROM lessons l JOIN modules m ON l.module_id=m.id JOIN courses c ON l.course_id=c.id LEFT JOIN course_progress cp ON l.id=cp.lesson_id AND cp.completed=1 GROUP BY l.id,c.name,m.name,l.lesson ORDER BY completions DESC LIMIT 10").fetchall()
+
+        # ⚡ Bolt Optimization: Pre-aggregate course_progress to prevent expensive grouping on joined tables
+        lesson_stats = conn.execute("""
+            SELECT c.name as course_name, m.name as module_name, l.lesson, COALESCE(cp.completions, 0) as completions
+            FROM lessons l
+            JOIN modules m ON l.module_id=m.id
+            JOIN courses c ON l.course_id=c.id
+            LEFT JOIN (
+                SELECT lesson_id, COUNT(id) as completions
+                FROM course_progress
+                WHERE completed=1
+                GROUP BY lesson_id
+            ) cp ON l.id = cp.lesson_id
+            ORDER BY completions DESC
+            LIMIT 10
+        """).fetchall()
 
         return render_template_string('''
         <html><head><title>Analytics</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}h3{color:#ff6b35;margin-top:0;}.table{width:100%;border-collapse:collapse;margin-top:15px;}.table th,.table td{padding:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05);}.table th{background:#0f172a;color:#94a3b8;}.table tr:hover{background:rgba(255,255,255,0.02);}</style></head>
