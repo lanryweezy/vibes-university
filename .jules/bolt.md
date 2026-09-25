@@ -39,3 +39,9 @@
 ## 2024-05-19 - [Subquery optimization in SQL to fix N+1 performance bottlenecks]
 **Learning:** In SQLite, queries joining a large table (like `users` or `lessons`) with a detailed table (`enrollments` or `course_progress`) and then grouping by the main table's ID perform very poorly. The database creates a large intermediate table with all combinations before aggregating (an O(N*M) operation). This acts as a massive performance bottleneck on large datasets.
 **Action:** Replace standard joined group-bys (e.g., `SELECT u.*, COUNT(e.id) ... FROM users u LEFT JOIN enrollments e ON u.id = e.user_id GROUP BY u.id`) with pre-aggregated subqueries (e.g., `SELECT u.*, e.enrollment_count ... FROM users u LEFT JOIN (SELECT user_id, COUNT(id) as enrollment_count ... FROM enrollments GROUP BY user_id) e ON u.id = e.user_id`). This aggregates the detail table once and then joins, reducing complexity to O(N). Always use `COALESCE(val, 0)` on the joined aggregates to ensure functional parity with the original grouped query.
+
+## 2024-09-25 - Missing SQLite Indices for Sorting by Created_at (Users, Contact Messages, Announcements)
+
+**Learning:** Queries on tables like `users`, `contact_messages` and `announcements` with `ORDER BY created_at DESC` (and combined filters like `WHERE status = 'unread'`) lead to full table scans and slow in-memory sorting (`USE TEMP B-TREE FOR ORDER BY`).
+
+**Action:** Added dedicated indices `idx_users_created_at`, `idx_announcements_created_at` and a composite index `idx_contact_messages_status_created_at` in `utils/db_utils.py` to enable fast `SCAN USING INDEX` operations and avoid in-memory sorting bottlenecks.
