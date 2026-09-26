@@ -22,3 +22,7 @@
 **Vulnerability:** IDOR vulnerability in `blueprints/teacher_courses_routes.py` where the `delete_lesson` route (`POST /teacher/lessons/<int:lesson_id>/delete`) deleted a lesson without verifying if the lesson actually belonged to a course owned by the requesting teacher.
 **Learning:** Destructive operations (like `DELETE` or modifying state) that accept a resource ID via the URL or request body are highly susceptible to IDOR if they don't validate ownership. A malicious user could iterate through IDs and delete resources belonging to others.
 **Prevention:** Always enforce authorization at the data access level for mutating operations by joining parent tables to traverse back to the root resource owner and including the current user's ID in the `WHERE` clause.
+## 2026-08-20 - [Sentinel] Fix CSRF Vulnerability on Profile Update
+**Vulnerability:** The `/profile` endpoint in `blueprints/profile_routes.py` allowed users to update sensitive account information via POST request but lacked the `@csrf_protect` decorator and did not pass a CSRF token to the inline HTML form template.
+**Learning:** Even internal or semi-protected pages rendered via inline `render_template_string` must explicitly be protected against Cross-Site Request Forgery.
+**Prevention:** Always decorate state-changing routes (`POST`, `PUT`, `DELETE`) with `@csrf_protect` from `utils.security_middleware`, generate a token within the view, and include `<input type="hidden" name="csrf_token" value="{{ csrf_token }}">` in any generated HTML form.

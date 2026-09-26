@@ -3,10 +3,12 @@ from utils.db_utils import get_db_connection, return_db_connection
 from utils.logging_utils import app_logger, log_info, log_error
 from utils.security_utils import sanitize_input
 from werkzeug.security import generate_password_hash
+from utils.security_middleware import csrf_protect, generate_csrf_token
 
 profile_bp = Blueprint('profile_bp', __name__)
 
 @profile_bp.route('/profile', methods=['GET', 'POST'])
+@csrf_protect
 def manage_profile():
     # Check if student or teacher is logged in
     user_id = None
@@ -26,6 +28,7 @@ def manage_profile():
         return redirect(url_for('main_bp.student_login'))
 
     message = ""
+    csrf_token = generate_csrf_token()
     conn = None
     try:
         conn = get_db_connection()
@@ -81,6 +84,7 @@ def manage_profile():
                 <h2>Account Settings</h2>
                 {% if message %}<div class="message">{{ message }}</div>{% endif %}
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="form-group">
                         <label for="full_name">Full Name <span aria-hidden="true" style="color: var(--primary);">*</span></label>
                         <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required autocomplete="name">
@@ -103,7 +107,7 @@ def manage_profile():
             </div>
         </body>
         </html>
-        ''', user=user, message=message, role=role)
+        ''', user=user, message=message, role=role, csrf_token=csrf_token)
     except Exception as e:
         log_error(app_logger, "Profile error", error=str(e))
         return "Error", 500
