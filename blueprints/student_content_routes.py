@@ -63,7 +63,9 @@ def student_courses():
                     modules[module_name_from_join] = []
                 modules[module_name_from_join].append(lesson_dict)
 
-        progress_data = conn.execute("SELECT course_id, lesson_id, completed FROM course_progress WHERE user_id = ?", (enrollment['user_id'],)).fetchall()
+        progress_data = []
+        if course_details:
+            progress_data = conn.execute("SELECT course_id, lesson_id, completed FROM course_progress WHERE user_id = ? AND course_id = ?", (enrollment['user_id'], target_course_id)).fetchall()
         progress_lookup = {}
         for p_row in progress_data:
             key = f"{p_row['course_id']}_{p_row['lesson_id']}"

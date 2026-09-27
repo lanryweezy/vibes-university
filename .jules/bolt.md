@@ -43,3 +43,8 @@
 ## 2024-05-24 - Missing SQLite Indexes for Foreign Keys and Lookups
 **Learning:** SQLite does not automatically index foreign keys (`courses.teacher_id`, `modules.course_id`) or columns frequently used for specific lookups (`enrollments.payment_reference`). Queries that filter or join by these columns perform full table scans without an explicit index, resulting in significant performance bottlenecks as the application scales.
 **Action:** Always explicitly verify that foreign keys and lookup columns used in `WHERE` and `JOIN` clauses have explicit database indexes created during schema initialization in `utils/db_utils.py`.
+
+## 2024-05-24 - Data Overfetching Bottlenecks in Course Progress
+
+**Learning:** When retrieving course progress for a user on a specific course page, querying by `user_id` alone and filtering in memory or loading all records into memory causes data overfetching and hidden N+1 style memory bottlenecks as the student enrolls in more courses and accumulates more progress records.
+**Action:** Database queries should explicitly filter by all relevant scope IDs (e.g., both `course_id` and `user_id`) in the `WHERE` clause instead of fetching records globally by user and discarding in application memory.
