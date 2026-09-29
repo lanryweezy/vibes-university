@@ -306,6 +306,8 @@ class DatabaseManager:
         # ⚡ Bolt Optimization: Add indices for faster sorting by created_at
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_created_at ON courses(created_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_blogs_created_at ON blogs(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contact_messages_status_created_at ON contact_messages(status, created_at DESC)')
 
         # ⚡ Bolt Optimization: Add missing indices for foreign keys and lookups
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id)')
