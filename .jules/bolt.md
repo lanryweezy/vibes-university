@@ -50,3 +50,8 @@
 ## 2026-09-29 - Missing SQLite Index for Users and Contact Messages Sorting
 **Learning:** Tables like `users` and `contact_messages` are frequently queried and sorted by `created_at DESC` in the admin dashboard. Without indices on these columns, SQLite performs a full table scan and then sorts the entire result set in memory using a temporary B-tree (`USE TEMP B-TREE FOR ORDER BY`). This `O(N log N)` sorting process can become very slow as the number of rows increases.
 **Action:** Added dedicated indices `idx_users_created_at` and `idx_contact_messages_status_created_at` in `utils/db_utils.py`. In the future, continue to actively look for columns used in `ORDER BY` operations combined with `LIMIT` on large tables, and create indices to enable faster `SCAN USING INDEX` operations and avoid in-memory sorting bottlenecks.
+
+## 2024-05-24 - Batch Filtered Aggregate Queries and Reuse Joined Data
+
+**Learning:** In routes like `admin_dashboard` and `get_stats`, multiple queries were executing `COUNT(*)` and `SUM(price)` with the same `WHERE payment_status = 'completed'` condition. Additionally, `view_lesson` performed a redundant database lookup for a course ID when the course name was already available from an earlier `JOIN`. This caused unnecessary database roundtrips and repetitive index/table scanning.
+**Action:** Combined multiple aggregate queries with identical `WHERE` clauses into single database calls (e.g., `SELECT COUNT(*), SUM(...)`) and reused already-fetched joined data for authorization checks to eliminate redundant queries. Always batch aggregations and maximize the use of data fetched via `JOIN`s to reduce database load.

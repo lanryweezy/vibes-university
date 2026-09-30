@@ -34,8 +34,12 @@ def get_stats():
     try:
         conn = get_db_connection()
         user_count = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-        enrollment_count = conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE payment_status = 'completed'").fetchone()['count']
-        total_revenue = conn.execute("SELECT SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()['total'] or 0
+
+        # ⚡ Bolt Optimization: Batch queries for enrollment_count and total_revenue
+        stats = conn.execute("SELECT COUNT(*) as count, SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()
+        enrollment_count = stats['count']
+        total_revenue = stats['total'] or 0
+
         return jsonify({
             'users': user_count,
             'enrollments': enrollment_count,

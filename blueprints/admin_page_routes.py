@@ -21,8 +21,12 @@ def admin_dashboard():
         conn = get_db_connection()
         total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
         total_enrollments = conn.execute('SELECT COUNT(*) as count FROM enrollments').fetchone()['count']
-        completed_payments = conn.execute("SELECT COUNT(*) as count FROM enrollments WHERE payment_status = 'completed'").fetchone()['count']
-        total_revenue = conn.execute("SELECT SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()['total'] or 0
+
+        # ⚡ Bolt Optimization: Batch queries for completed_payments and total_revenue
+        stats = conn.execute("SELECT COUNT(*) as count, SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()
+        completed_payments = stats['count']
+        total_revenue = stats['total'] or 0
+
         total_lessons_stat = conn.execute('SELECT COUNT(*) as count FROM lessons').fetchone()['count']
         
         recent_enrollments = conn.execute("SELECT e.*, u.full_name, u.email FROM enrollments e JOIN users u ON e.user_id = u.id ORDER BY e.enrolled_at DESC LIMIT 10").fetchall()

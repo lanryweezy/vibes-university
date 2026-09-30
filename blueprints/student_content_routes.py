@@ -120,9 +120,8 @@ def view_lesson(lesson_id):
             lesson['element_properties'] = {}
 
         enrolled_course_name_from_session = enrollment['course_type']
-        enrolled_course_details = conn.execute('SELECT id FROM courses WHERE name = ?', (enrolled_course_name_from_session,)).fetchone()
 
-        if not enrolled_course_details or lesson['course_id'] != enrolled_course_details['id']:
+        if lesson.get('course_name') != enrolled_course_name_from_session:
             return "Access denied to this lesson.", 403
 
         all_lessons_raw = conn.execute("SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons WHERE course_id = ? ORDER BY module_id, order_index, lesson", (lesson['course_id'],)).fetchall()
