@@ -172,7 +172,7 @@ def admin_login():
             document.querySelector('form').addEventListener('submit', function() {
                 const btn = this.querySelector('button[type="submit"]');
                 btn.disabled = true;
-                btn.innerHTML = 'Unlocking...';
+                btn.innerHTML = 'Unlocking... ⏳';
             });
         </script>
     </body></html>
@@ -315,7 +315,7 @@ def admin_announcements():
             document.querySelector('form').addEventListener('submit', function() {
                 const btn = this.querySelector('button[type="submit"]');
                 btn.disabled = true;
-                btn.innerHTML = 'Posting...';
+                btn.innerHTML = 'Posting... ⏳';
             });
         </script>
         </body></html>
