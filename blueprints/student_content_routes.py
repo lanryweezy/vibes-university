@@ -124,11 +124,37 @@ def view_lesson(lesson_id):
         if lesson.get('course_name') != enrolled_course_name_from_session:
             return "Access denied to this lesson.", 403
 
-        all_lessons_raw = conn.execute("SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons WHERE course_id = ? ORDER BY module_id, order_index, lesson", (lesson['course_id'],)).fetchall()
-        all_lessons = [dict(l) for l in all_lessons_raw]
-        current_index = next((i for i, l_item in enumerate(all_lessons) if l_item['id'] == lesson_id), None)
-        next_l = all_lessons[current_index + 1] if current_index is not None and current_index + 1 < len(all_lessons) else None
-        prev_l = all_lessons[current_index - 1] if current_index is not None and current_index > 0 else None
+        # ⚡ Bolt Optimization: Use scalar subqueries instead of fetching all lessons into Python memory to find prev/next lessons
+        curr_module_id = lesson['module_id']
+        curr_order_index = lesson.get('order_index')
+        if curr_order_index is None:
+            curr_order_index = 1
+        curr_lesson_name = lesson['lesson']
+
+        prev_l_row = conn.execute('''
+            SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons
+            WHERE course_id = ? AND (
+                module_id < ? OR
+                (module_id = ? AND COALESCE(order_index, 1) < ?) OR
+                (module_id = ? AND COALESCE(order_index, 1) = ? AND lesson < ?)
+            )
+            ORDER BY module_id DESC, COALESCE(order_index, 1) DESC, lesson DESC
+            LIMIT 1
+        ''', (lesson['course_id'], curr_module_id, curr_module_id, curr_order_index, curr_module_id, curr_order_index, curr_lesson_name)).fetchone()
+
+        next_l_row = conn.execute('''
+            SELECT id, lesson, module_id, COALESCE(order_index, 1) as order_index FROM lessons
+            WHERE course_id = ? AND (
+                module_id > ? OR
+                (module_id = ? AND COALESCE(order_index, 1) > ?) OR
+                (module_id = ? AND COALESCE(order_index, 1) = ? AND lesson > ?)
+            )
+            ORDER BY module_id ASC, COALESCE(order_index, 1) ASC, lesson ASC
+            LIMIT 1
+        ''', (lesson['course_id'], curr_module_id, curr_module_id, curr_order_index, curr_module_id, curr_order_index, curr_lesson_name)).fetchone()
+
+        prev_l = dict(prev_l_row) if prev_l_row else None
+        next_l = dict(next_l_row) if next_l_row else None
     except Exception as e:
         log_error(db_logger, "Failed to retrieve lesson data", error=str(e))
         return "Error loading lesson", 500
