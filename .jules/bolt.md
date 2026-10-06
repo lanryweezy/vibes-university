@@ -55,3 +55,7 @@
 
 **Learning:** In routes like `admin_dashboard` and `get_stats`, multiple queries were executing `COUNT(*)` and `SUM(price)` with the same `WHERE payment_status = 'completed'` condition. Additionally, `view_lesson` performed a redundant database lookup for a course ID when the course name was already available from an earlier `JOIN`. This caused unnecessary database roundtrips and repetitive index/table scanning.
 **Action:** Combined multiple aggregate queries with identical `WHERE` clauses into single database calls (e.g., `SELECT COUNT(*), SUM(...)`) and reused already-fetched joined data for authorization checks to eliminate redundant queries. Always batch aggregations and maximize the use of data fetched via `JOIN`s to reduce database load.
+
+## 2026-10-05 - Avoid fetching full lists for adjacent element navigation
+**Learning:** In routes that allow navigating to previous/next items (like `view_lesson` in `student_content_routes.py`), fetching all items of a parent entity into memory (e.g., all lessons in a course) just to find adjacent elements using `enumerate()` creates a severe memory overfetching bottleneck. This scales poorly as the number of items per parent grows (an O(N) operation instead of O(1)).
+**Action:** Replace in-memory array manipulation with explicit SQL scalar subqueries using `LIMIT 1` and appropriate `ORDER BY` and `WHERE` clauses to directly fetch only the adjacent rows from the database.
