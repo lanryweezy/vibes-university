@@ -107,10 +107,10 @@ def manage_profile():
                 <a href="{{ url_for('main_bp.dashboard') if role == 'student' else url_for('teacher_auth_bp.teacher_dashboard') }}" class="back-link">← Back to Dashboard</a>
             </div>
             <script>
-                document.querySelector('form').addEventListener('submit', function() {
-                    const btn = this.querySelector('button[type="submit"]');
+                document.querySelector('form').addEventListener('submit', function(event) {
+                    const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
                     btn.disabled = true;
-                    btn.innerHTML = 'Updating... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+                    btn.innerHTML = 'Updating... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
                 });
             </script>
         </body>

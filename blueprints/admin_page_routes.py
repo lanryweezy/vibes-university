@@ -169,10 +169,10 @@ def admin_login():
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
         </div>
         <script>
-            document.querySelector('form').addEventListener('submit', function() {
-                const btn = this.querySelector('button[type="submit"]');
+            document.querySelector('form').addEventListener('submit', function(event) {
+                const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
                 btn.disabled = true;
-                btn.innerHTML = 'Unlocking... ⏳';
+                btn.innerHTML = 'Unlocking... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
             });
         </script>
     </body></html>
@@ -276,10 +276,10 @@ def admin_settings():
     <div class="form-group"><label for="new_password">New Admin Password:</label><input type="password" id="new_password" name="new_password" placeholder="Enter new admin password" autocomplete="new-password"></div>
     <button type="submit" class="save-btn">💾 Save Changes</button></form></div>
     <script>
-        document.querySelector('form').addEventListener('submit', function() {
-            const btn = this.querySelector('button[type="submit"]');
+        document.querySelector('form').addEventListener('submit', function(event) {
+            const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
             btn.disabled = true;
-            btn.innerHTML = '💾 Saving...';
+            btn.innerHTML = 'Saving... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
         });
     </script>
     </body></html>
@@ -312,10 +312,10 @@ def admin_announcements():
         <div class="form-group"><label for="message_content">Message: <span aria-hidden="true" style="color:#ef4444;margin-left:2px;">*</span></label><textarea id="message_content" name="message_content" rows="4" required></textarea></div>
         <button type="submit" class="btn">Post Announcement</button></form></div>
         <script>
-            document.querySelector('form').addEventListener('submit', function() {
-                const btn = this.querySelector('button[type="submit"]');
+            document.querySelector('form').addEventListener('submit', function(event) {
+                const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
                 btn.disabled = true;
-                btn.innerHTML = 'Posting... ⏳';
+                btn.innerHTML = 'Posting... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
             });
         </script>
         </body></html>
