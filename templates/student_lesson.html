@@ -180,7 +180,7 @@
 
             const btn = event.target.closest('button') || event.target;
             btn.disabled = true;
-            btn.innerHTML = 'Verifying... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+            btn.innerHTML = 'Verifying... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
 
             fetch(`/api/student/submit-quiz/${lessonId}`, {
                 method: 'POST',

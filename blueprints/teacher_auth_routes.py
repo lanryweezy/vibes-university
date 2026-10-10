@@ -89,10 +89,10 @@ def teacher_login():
     <label for="password">Password <span aria-hidden="true" style="color:#ff6b35;">*</span></label><input type="password" name="password" id="password" required autocomplete="current-password">
     <button class="btn" type="submit">Login as Teacher</button></form>
     <script>
-        document.getElementById('teacher-login-form').addEventListener('submit', function() {
-            const btn = this.querySelector('button[type="submit"]');
+        document.getElementById('teacher-login-form').addEventListener('submit', function(event) {
+            const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
             btn.disabled = true;
-            btn.innerHTML = 'Logging in... ⏳';
+            btn.innerHTML = 'Logging in... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
         });
     </script>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
@@ -101,10 +101,10 @@ def teacher_login():
     <p><a href="/" style="color:#ff6b35;">← Back to Home</a></p>
     </div></div>
     <script>
-        document.querySelector('form').addEventListener('submit', function() {
-            const btn = this.querySelector('button[type="submit"], button:not([type])');
+        document.querySelector('form').addEventListener('submit', function(event) {
+            const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
             btn.disabled = true;
-            btn.innerHTML = 'Logging in ⏳';
+            btn.innerHTML = 'Logging in <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
         });
     </script>
     </body></html>
