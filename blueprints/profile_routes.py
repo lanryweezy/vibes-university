@@ -71,7 +71,13 @@ def manage_profile():
                 h2 { color: #fff; text-align: center; margin-bottom: 32px; font-size: 2rem; }
                 .form-group { margin-bottom: 24px; }
                 label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+                .input-wrapper { position: relative; }
+                .input-wrapper i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+                .password-toggle { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: color 0.3s; }
+                .password-toggle:hover { color: #fff; }
+                .password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
                 input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6); color: #fff; box-sizing: border-box; transition: all 0.3s; }
+                input#new_password { padding-right: 44px; }
                 input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15); background: rgba(15, 23, 42, 0.8); }
                 .btn { background: var(--primary); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 16px; transition: all 0.3s; }
                 .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.3); }
@@ -100,7 +106,12 @@ def manage_profile():
                     </div>
                     <div class="form-group">
                         <label for="new_password">New Password (leave blank to keep current)</label>
-                        <input type="password" id="new_password" name="new_password" placeholder="••••••••" autocomplete="new-password">
+                        <div class="input-wrapper">
+                            <input type="password" id="new_password" name="new_password" placeholder="••••••••" autocomplete="new-password">
+                            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                                <i class="fas fa-eye" style="position: static; transform: none; right: auto; top: auto;"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="btn">Update Profile</button>
                 </form>
@@ -111,6 +122,25 @@ def manage_profile():
                     const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
                     btn.disabled = true;
                     btn.innerHTML = 'Updating... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
+                });
+
+                const togglePasswordBtn = document.getElementById('togglePassword');
+                const passwordInput = document.getElementById('new_password');
+
+                togglePasswordBtn.addEventListener('click', function(e) {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+
+                    const icon = e.currentTarget.querySelector('i');
+                    if (type === 'password') {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                        e.currentTarget.setAttribute('aria-label', 'Show password');
+                    } else {
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                        e.currentTarget.setAttribute('aria-label', 'Hide password');
+                    }
                 });
             </script>
         </body>
