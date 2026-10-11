@@ -19,23 +19,31 @@ def admin_dashboard():
     conn = None
     try:
         conn = get_db_connection()
-        total_users = conn.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
-        total_enrollments = conn.execute('SELECT COUNT(*) as count FROM enrollments').fetchone()['count']
 
-        # ⚡ Bolt Optimization: Batch queries for completed_payments and total_revenue
+        # ⚡ Bolt Optimization: Batch scalar counts into a single query to reduce database roundtrips, keeping COUNT(*) and SUM(price) for completed enrollments batched to avoid scanning twice
+        dashboard_stats = conn.execute('''
+            SELECT
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM enrollments) as total_enrollments,
+                (SELECT COUNT(*) FROM lessons) as total_lessons,
+                (SELECT COUNT(*) FROM contact_messages WHERE status = 'unread') as unread_count
+        ''').fetchone()
+
+        total_users = dashboard_stats['total_users'] or 0
+        total_enrollments = dashboard_stats['total_enrollments'] or 0
+        total_lessons_stat = dashboard_stats['total_lessons'] or 0
+        unread_count = dashboard_stats['unread_count'] or 0
+
+        # Maintain original optimization for completed_payments and total_revenue single pass scan
         stats = conn.execute("SELECT COUNT(*) as count, SUM(price) as total FROM enrollments WHERE payment_status = 'completed'").fetchone()
-        completed_payments = stats['count']
+        completed_payments = stats['count'] or 0
         total_revenue = stats['total'] or 0
 
-        total_lessons_stat = conn.execute('SELECT COUNT(*) as count FROM lessons').fetchone()['count']
-        
         recent_enrollments = conn.execute("SELECT e.*, u.full_name, u.email FROM enrollments e JOIN users u ON e.user_id = u.id ORDER BY e.enrolled_at DESC LIMIT 10").fetchall()
         course_stats = conn.execute("SELECT course_type, COUNT(*) as count, SUM(price) as revenue FROM enrollments WHERE payment_status = 'completed' GROUP BY course_type").fetchall()
 
         # Contact Messages
         unread_messages = conn.execute("SELECT * FROM contact_messages WHERE status = 'unread' ORDER BY created_at DESC LIMIT 10").fetchall()
-        unread_count_row = conn.execute("SELECT COUNT(*) as count FROM contact_messages WHERE status = 'unread'").fetchone()
-        unread_count = unread_count_row['count'] if unread_count_row else 0
 
         return render_template_string('''
         <html><head><title>Admin Dashboard - Vibes University</title>
