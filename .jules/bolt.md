@@ -59,3 +59,9 @@
 ## 2026-10-05 - Avoid fetching full lists for adjacent element navigation
 **Learning:** In routes that allow navigating to previous/next items (like `view_lesson` in `student_content_routes.py`), fetching all items of a parent entity into memory (e.g., all lessons in a course) just to find adjacent elements using `enumerate()` creates a severe memory overfetching bottleneck. This scales poorly as the number of items per parent grows (an O(N) operation instead of O(1)).
 **Action:** Replace in-memory array manipulation with explicit SQL scalar subqueries using `LIMIT 1` and appropriate `ORDER BY` and `WHERE` clauses to directly fetch only the adjacent rows from the database.
+
+## 2026-10-15 - Batch Independent Scalar Aggregations
+
+**Learning:** Routes like `admin_dashboard` and `get_stats` were performing multiple sequential `.execute()` calls to fetch independent global aggregate counts (e.g., `COUNT(*) FROM users`, `COUNT(*) FROM enrollments`, `SUM(price) FROM enrollments`). Even though these queries are simple, running them sequentially creates significant Python-to-database communication overhead and prevents the database query planner from optimizing the entire block of queries. This N+1 style anti-pattern adds up, degrading page load speed.
+
+**Action:** Combined multiple independent scalar aggregate queries into a single SQL execution using scalar subqueries (e.g., `SELECT (SELECT COUNT(*) FROM users) as total_users, (SELECT SUM(...) ...) as total_revenue`). This reduces multiple roundtrips to just one execution, improving backend rendering speed. Always look for sequential `.fetchone()` operations that can be combined.
