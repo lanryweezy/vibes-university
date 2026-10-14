@@ -23,3 +23,7 @@
 ## 2026-10-11 - Adding 'Show password' toggle to profile new password field
 **Learning:** Found that the profile update form's new password field lacked a 'Show/Hide Password' toggle, making it difficult for users to confirm their input before saving, which is especially critical when there is no 'Confirm Password' field.
 **Action:** When working on standalone or inline profile forms that include password change fields, ensure a toggle is present to provide immediate visual feedback. Be sure to use `type="button"` for the toggle and dynamically switch its `aria-label` for accessibility.
+
+## 2026-10-12 - Standardize Show/Hide Password Toggle for Auth Pages
+**Learning:** Inconsistent UX across authentication pages where student profile forms included 'show/hide password' toggles, but admin and teacher login/settings forms did not, reducing accessibility and causing user friction.
+**Action:** When working on authentication or settings forms, always ensure a consistent 'show/hide password' toggle is present. Use `type="button"`, place it absolutely inside an `.input-wrapper` container, and dynamically switch the `aria-label` for screen readers.

@@ -163,7 +163,13 @@ def admin_login():
         button{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;font-weight:bold;cursor:pointer;transition:all 0.3s;}
         button:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.3);}
         button:disabled{opacity:0.7;cursor:not-allowed;}
+        .input-wrapper{position:relative; margin-bottom:20px;}
+        .input-wrapper input{margin-bottom:0; padding-right:40px;}
+        .password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:color 0.3s; width:auto; margin:0;}
+        .password-toggle:hover{color:#fff;}
+        .password-toggle:focus-visible{outline:2px solid #ff6b35;outline-offset:2px;border-radius:4px;}
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     </head>
     <body>
         <div class="card">
@@ -171,7 +177,12 @@ def admin_login():
             <form method="post">
                 <input type="hidden" name="csrf_token" value="{{csrf_token}}">
                 <label for="password" style="display:block;margin-bottom:8px;color:#94a3b8;font-size:0.85rem;font-weight:600;text-transform:uppercase;">Admin Password <span aria-hidden="true" style="color:#ef4444;margin-left:2px;">*</span></label>
-                <input type="password" id="password" name="password" placeholder="Admin Password" required autocomplete="current-password">
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" placeholder="Admin Password" required autocomplete="current-password">
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                        <i class="fas fa-eye" style="position: static; transform: none; right: auto; top: auto;"></i>
+                    </button>
+                </div>
                 <button type="submit">Unlock Dashboard</button>
             </form>
             {% if message %}<div style="color:#ef4444;margin-top:20px;text-align:center;font-size:0.9rem;">{{message}}</div>{% endif %}
@@ -181,6 +192,25 @@ def admin_login():
                 const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
                 btn.disabled = true;
                 btn.innerHTML = 'Unlocking... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
+            });
+
+            const togglePasswordBtn = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+
+            togglePasswordBtn.addEventListener('click', function(e) {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                const icon = e.currentTarget.querySelector('i');
+                if (type === 'password') {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                    e.currentTarget.setAttribute('aria-label', 'Show password');
+                } else {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                    e.currentTarget.setAttribute('aria-label', 'Hide password');
+                }
             });
         </script>
     </body></html>
@@ -277,17 +307,44 @@ def admin_settings():
     csrf_token = generate_csrf_token()
 
     return render_template_string('''
-    <html><head><title>Settings</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}h3{color:#ff6b35;margin-top:0;}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;color:#94a3b8;}.form-group input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;transition:all 0.3s;}.form-group input:focus{border-color:#ff6b35;outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.save-btn{background:#10b981;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:all 0.3s;}.save-btn:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(16,185,129,0.3);}.save-btn:disabled{opacity:0.7;cursor:not-allowed;}</style></head>
+    <html><head><title>Settings</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:20px;}.header{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;display:flex;justify-content:space-between;align-items:center;}h1{color:#ff6b35;margin:0;}.back-btn{background:#334155;color:#fff;padding:10px 20px;border:none;border-radius:8px;text-decoration:none;font-weight:bold;}.section{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:30px;border:1px solid rgba(255,255,255,0.05);}h3{color:#ff6b35;margin-top:0;}.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:5px;color:#94a3b8;}.form-group input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0f172a;color:#fff;transition:all 0.3s;}.form-group input:focus{border-color:#ff6b35;outline:none;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.save-btn{background:#10b981;color:#fff;padding:12px 30px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;transition:all 0.3s;}.save-btn:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(16,185,129,0.3);}.save-btn:disabled{opacity:0.7;cursor:not-allowed;} .input-wrapper{position:relative;} .password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:color 0.3s;} .password-toggle:hover{color:#fff;} .password-toggle:focus-visible{outline:2px solid #ff6b35;outline-offset:2px;border-radius:4px;}</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></head>
     <body><div class="header"><h1>⚙️ System Settings</h1><a href="{{url_for('admin_page_bp.admin_dashboard')}}" class="back-btn">← Dashboard</a></div>
     <div class="section"><h3>🔐 Security Settings</h3><form method="post">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
-    <div class="form-group"><label for="new_password">New Admin Password:</label><input type="password" id="new_password" name="new_password" placeholder="Enter new admin password" autocomplete="new-password"></div>
+    <div class="form-group"><label for="new_password">New Admin Password:</label>
+        <div class="input-wrapper">
+            <input type="password" id="new_password" name="new_password" placeholder="Enter new admin password" autocomplete="new-password" style="padding-right: 40px;">
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+                <i class="fas fa-eye" style="position: static; transform: none; right: auto; top: auto;"></i>
+            </button>
+        </div>
+    </div>
     <button type="submit" class="save-btn">💾 Save Changes</button></form></div>
     <script>
         document.querySelector('form').addEventListener('submit', function(event) {
             const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
             btn.disabled = true;
             btn.innerHTML = 'Saving... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
+        });
+
+        const togglePasswordBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('new_password');
+
+        togglePasswordBtn.addEventListener('click', function(e) {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            const icon = e.currentTarget.querySelector('i');
+            if (type === 'password') {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                e.currentTarget.setAttribute('aria-label', 'Show password');
+            } else {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                e.currentTarget.setAttribute('aria-label', 'Hide password');
+            }
         });
     </script>
     </body></html>

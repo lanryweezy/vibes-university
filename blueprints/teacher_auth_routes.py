@@ -81,18 +81,44 @@ def teacher_login():
     
     return render_template_string('''
     <html><head><title>Teacher Login - Vibes University</title>
-    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;box-sizing:border-box;transition:all 0.3s;}input:focus,select:focus{outline:none;border:1px solid #ff6b35;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;transition:all 0.3s;}.btn:disabled{opacity:0.7;cursor:not-allowed;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;}</style></head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>body{font-family:Arial,sans-serif;background:#111;color:#fff;}.container{max-width:500px;margin:60px auto;background:#222;padding:40px;border-radius:15px;box-shadow:0 8px 32px #0008;}h2{color:#ff6b35;}label{display:block;margin-top:20px;}input,select{width:100%;padding:10px;margin-top:5px;border-radius:8px;border:none;background:#333;color:#fff;box-sizing:border-box;transition:all 0.3s;}input:focus,select:focus{outline:none;border:1px solid #ff6b35;box-shadow:0 0 0 4px rgba(255,107,53,0.15);}.btn{background:linear-gradient(45deg,#ff6b35,#ff8c42);color:#fff;border:none;padding:15px 0;width:100%;border-radius:8px;font-size:1.1rem;margin-top:30px;cursor:pointer;font-weight:bold;transition:all 0.3s;}.btn:disabled{opacity:0.7;cursor:not-allowed;}.msg{margin-top:20px;text-align:center;}.error{color:#f44336;background:rgba(244,67,54,0.1);padding:10px;border-radius:5px;}.success{color:#4CAF50;background:rgba(76,175,80,0.1);padding:10px;border-radius:5px;} .input-wrapper{position:relative;} .password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#999;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:color 0.3s;} .password-toggle:hover{color:#fff;} .password-toggle:focus-visible{outline:2px solid #ff6b35;outline-offset:2px;border-radius:4px;}</style></head>
     <body><div class="container"><h2>🎓 Teacher Login</h2>
     <form method="post" id="teacher-login-form">
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
     <label for="email">Email <span aria-hidden="true" style="color:#ff6b35;">*</span></label><input type="email" name="email" id="email" required autocomplete="email">
-    <label for="password">Password <span aria-hidden="true" style="color:#ff6b35;">*</span></label><input type="password" name="password" id="password" required autocomplete="current-password">
+    <label for="password">Password <span aria-hidden="true" style="color:#ff6b35;">*</span></label>
+    <div class="input-wrapper">
+        <input type="password" name="password" id="password" required autocomplete="current-password" style="padding-right: 40px;">
+        <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">
+            <i class="fas fa-eye" style="position: static; transform: none; right: auto; top: auto;"></i>
+        </button>
+    </div>
     <button class="btn" type="submit">Login as Teacher</button></form>
     <script>
         document.getElementById('teacher-login-form').addEventListener('submit', function(event) {
             const btn = event.submitter || this.querySelector('button[type=\"submit\"]');
             btn.disabled = true;
             btn.innerHTML = 'Logging in... <i class=\"fas fa-spinner fa-spin\" style=\"margin-left: 8px;\"></i>';
+        });
+
+        const togglePasswordBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePasswordBtn.addEventListener('click', function(e) {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            const icon = e.currentTarget.querySelector('i');
+            if (type === 'password') {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                e.currentTarget.setAttribute('aria-label', 'Show password');
+            } else {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                e.currentTarget.setAttribute('aria-label', 'Hide password');
+            }
         });
     </script>
     {% if message %}<div class="msg {% if 'successful' in message %}success{% else %}error{% endif %}">{{message}}</div>{% endif %}
