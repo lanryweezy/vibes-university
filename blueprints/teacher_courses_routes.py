@@ -375,8 +375,8 @@ def teacher_course_studio_page():
                         Object.assign(lessonDiv, { className: 'lesson-element-item', draggable: true, dataset: { lessonId: lesson.id, moduleId: module.id, originalOrder: lesson.order_index }, style: "border:1px solid #555; padding:8px; margin-bottom:5px; border-radius:4px; background-color:rgba(255,255,255,0.05); cursor:grab;" });
                         let lessonContentHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><span><strong>${lesson.lesson}</strong> <span style="font-size:0.8em; color:#ccc;">(${lesson.content_type})</span></span>`;
                         const controlsDiv = document.createElement('div'); controlsDiv.style.whiteSpace = 'nowrap';
-                        const upButton = document.createElement('button'); Object.assign(upButton, { innerHTML: '&#x25B2;', title: "Move Up", style: "margin-left:10px; padding:2px 5px;", onclick: (e) => { e.stopPropagation(); moveLesson(lesson.id, 'up'); } });
-                        const downButton = document.createElement('button'); Object.assign(downButton, { innerHTML: '&#x25BC;', title: "Move Down", style: "margin-left:5px; padding:2px 5px;", onclick: (e) => { e.stopPropagation(); moveLesson(lesson.id, 'down'); } });
+                        const upButton = document.createElement('button'); Object.assign(upButton, { innerHTML: '&#x25B2;', title: "Move Up", ariaLabel: "Move Up", style: "margin-left:10px; padding:2px 5px;", onclick: (e) => { e.stopPropagation(); moveLesson(lesson.id, 'up'); } });
+                        const downButton = document.createElement('button'); Object.assign(downButton, { innerHTML: '&#x25BC;', title: "Move Down", ariaLabel: "Move Down", style: "margin-left:5px; padding:2px 5px;", onclick: (e) => { e.stopPropagation(); moveLesson(lesson.id, 'down'); } });
                         controlsDiv.append(upButton, downButton);
                         lessonDiv.innerHTML = lessonContentHTML; lessonDiv.appendChild(controlsDiv);
                         lessonDiv.addEventListener('click', (e) => { if(!e.target.closest('button')) selectLessonElement(lesson); });
