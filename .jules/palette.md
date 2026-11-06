@@ -30,3 +30,6 @@
 ## 2026-10-15 - Required attribute added to inputs
 **Learning:** Found several input fields in teacher courses form that were lacking required attributes.
 **Action:** Always make sure forms that requires input to have required attribute in the element tag.
+## 2026-11-06 - Modal Form Submit Button Feedback
+**Learning:** Found several modal forms generated dynamically in `teacher_courses_routes.py` without loading state feedback upon submission.
+**Action:** Implemented a robust `e.submitter` fallback logic combined with a `try/finally` block during modal form submission (`onsubmit`) to reliably append a loading spinner and disable the button while preventing duplicated asynchronous requests.
