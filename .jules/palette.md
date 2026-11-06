@@ -27,3 +27,6 @@
 ## 2026-10-12 - Standardize Show/Hide Password Toggle for Auth Pages
 **Learning:** Inconsistent UX across authentication pages where student profile forms included 'show/hide password' toggles, but admin and teacher login/settings forms did not, reducing accessibility and causing user friction.
 **Action:** When working on authentication or settings forms, always ensure a consistent 'show/hide password' toggle is present. Use `type="button"`, place it absolutely inside an `.input-wrapper` container, and dynamically switch the `aria-label` for screen readers.
+## 2026-10-15 - Required attribute added to inputs
+**Learning:** Found several input fields in teacher courses form that were lacking required attributes.
+**Action:** Always make sure forms that requires input to have required attribute in the element tag.
