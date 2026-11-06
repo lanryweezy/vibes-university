@@ -180,7 +180,27 @@ def teacher_course_studio_page():
                 modalFormContentEl.innerHTML = formHTML;
                 currentSubmitCallback = submitCallback;
                 const formInModal = modalFormContentEl.querySelector('form');
-                if (formInModal) { formInModal.onsubmit = async (e) => { e.preventDefault(); if(currentSubmitCallback) await currentSubmitCallback(new FormData(formInModal), closeModal); }; }
+                if (formInModal) {
+                    formInModal.onsubmit = async (e) => {
+                        e.preventDefault();
+                        if(currentSubmitCallback) {
+                            const btn = e.submitter || formInModal.querySelector('button[type="submit"]');
+                            const originalText = btn ? btn.innerHTML : '';
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.innerHTML = 'Processing... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
+                            }
+                            try {
+                                await currentSubmitCallback(new FormData(formInModal), closeModal);
+                            } finally {
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = originalText;
+                                }
+                            }
+                        }
+                    };
+                }
                 modalContainer.style.display = 'flex';
             }
             function closeModal() { modalContainer.style.display = 'none'; modalFormContentEl.innerHTML = ''; currentSubmitCallback = null; }
