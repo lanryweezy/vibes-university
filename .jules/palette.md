@@ -33,3 +33,6 @@
 ## 2026-11-06 - Modal Form Submit Button Feedback
 **Learning:** Found several modal forms generated dynamically in `teacher_courses_routes.py` without loading state feedback upon submission.
 **Action:** Implemented a robust `e.submitter` fallback logic combined with a `try/finally` block during modal form submission (`onsubmit`) to reliably append a loading spinner and disable the button while preventing duplicated asynchronous requests.
+## 2026-11-08 - Added loading state to Course Settings Save Button
+**Learning:** Found that the Course Settings save button didn't provide any visual feedback when saving data asynchronously, leaving users confused about if the action succeeded.
+**Action:** Implemented a standard loading state using the FontAwesome spinner class and disabled attribute. Added a try/finally block so the original state restores correctly regardless of API success.
