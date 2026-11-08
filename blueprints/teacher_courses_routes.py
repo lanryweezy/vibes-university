@@ -90,7 +90,8 @@ def teacher_course_studio_page():
             .form-group { margin-bottom: 1rem; }
             .form-group label { display: block; color: #81C784; margin-bottom: .3rem; font-size:0.9em; }
             .btn-primary { background: linear-gradient(45deg, #4CAF50, #8BC34A); color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 1rem; transition: all 0.3s; }
-            .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3); }
+            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3); }
+            .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
             .btn-secondary { background: #555; }
             .btn-danger { background: #d9534f; }
             .EasyMDEContainer .CodeMirror { background: rgba(255,255,255,0.05); border-color: rgba(76,175,80,0.3); color:white; }
@@ -522,12 +523,21 @@ def teacher_course_studio_page():
             saveCourseSettingsBtn.addEventListener('click', async () => {
                 if (!selectedCourseId) { alert("No course selected."); return; }
                 const payload = {name:settingCourseTitleInput.value,description:settingCourseDescriptionInput.value,settings:{difficulty:settingCourseDifficultyInput.value,duration:settingCourseDurationInput.value,income_potential:settingCourseIncomeInput.value}};
+                const originalText = saveCourseSettingsBtn.innerHTML;
+                saveCourseSettingsBtn.disabled = true;
+                saveCourseSettingsBtn.innerHTML = 'Saving... <i class="fas fa-spinner fa-spin" style="margin-left: 8px;"></i>';
                 try {
                     const response = await fetch(`/api/teacher/courses/${selectedCourseId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
                     if(!response.ok) throw new Error((await response.json()).error || 'Failed to save');
                     alert('Settings saved!'); fetchCourses(); currentCourseTitleEl.textContent = `Editing: ${payload.name}`;
                     if(currentCourseData&&currentCourseData.id===selectedCourseId){currentCourseData.name=payload.name;currentCourseData.description=payload.description;currentCourseData.course_settings=payload.settings;}
-                } catch (error) { console.error("Failed to save settings:",error);alert(`Error: ${error.message}`);}
+                } catch (error) {
+                    console.error("Failed to save settings:",error);
+                    alert(`Error: ${error.message}`);
+                } finally {
+                    saveCourseSettingsBtn.disabled = false;
+                    saveCourseSettingsBtn.innerHTML = originalText;
+                }
             });
 
             const addNewModuleBtn = document.getElementById('add-new-module-btn');
