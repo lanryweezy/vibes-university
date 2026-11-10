@@ -68,6 +68,12 @@
         }
 
         .quiz-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            color: inherit;
+            font-family: inherit;
+            font-size: inherit;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 20px;
@@ -78,6 +84,7 @@
             font-weight: 500;
         }
         .quiz-option:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--primary); }
+        .quiz-option:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
         .quiz-option.selected { background: rgba(255, 107, 53, 0.1); border-color: var(--primary); color: var(--primary); }
 
         /* Navigation */
