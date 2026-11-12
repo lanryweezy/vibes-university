@@ -36,3 +36,6 @@
 ## 2026-11-08 - Added loading state to Course Settings Save Button
 **Learning:** Found that the Course Settings save button didn't provide any visual feedback when saving data asynchronously, leaving users confused about if the action succeeded.
 **Action:** Implemented a standard loading state using the FontAwesome spinner class and disabled attribute. Added a try/finally block so the original state restores correctly regardless of API success.
+## 2026-11-10 - Button vs Div for Interactive Custom Options
+**Learning:** Found that custom interactive options in quizzes were implemented using `<div>` elements with JavaScript click listeners. While this works for mouse users, it completely breaks accessibility for keyboard users, who cannot focus the options via tab navigation or select them using Space/Enter.
+**Action:** Always use semantic `<button>` elements for custom interactive options (like quiz answers or select dropdowns). Ensure the button styles are normalized (e.g. `display: block`, `width: 100%`, `text-align: left`, etc.) and explicitly add `:focus-visible` styles to provide clear keyboard navigation indicators.

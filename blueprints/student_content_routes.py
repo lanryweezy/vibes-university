@@ -185,7 +185,7 @@ def view_lesson(lesson_id):
         quiz_question = html.escape(str(element_props.get('question', 'N/A')))
         options_list = element_props.get('options', [])
         if not isinstance(options_list, list): options_list = []
-        options_html = "".join([f"<div class='quiz-option' data-index='{i}'>{html.escape(str(opt))}</div>" for i, opt in enumerate(options_list)])
+        options_html = "".join([f"<button type='button' class='quiz-option' data-index='{i}'>{html.escape(str(opt))}</button>" for i, opt in enumerate(options_list)])
         lesson_render_content = f'''
             <div class='quiz-container'>
                 <h3 style="margin-bottom: 24px;">{quiz_question}</h3>
